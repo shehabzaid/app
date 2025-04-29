@@ -121,172 +121,347 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _createDemoUser() async {
-    // تقدر تضيف هنا if needed عملية إنشاء مستخدم تجريبي من AuthService
-  }
-
-  Future<void> _createTables() async {
-    // تقدر تضيف هنا عملية إنشاء الجداول إذا ما كانت موجودة
-  }
-
-  Future<void> _checkDatabaseConnection() async {
-    // تقدر تضيف هنا عملية فحص الاتصال بقاعدة البيانات
-  }
+  // تم إزالة الدوال غير المستخدمة (_createDemoUser, _createTables, _checkDatabaseConnection)
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('تسجيل الدخول - منصة صحتي بلس'),
-        centerTitle: true,
-      ),
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(24.w),
-            child: Column(
+        child: Stack(
+          children: [
+            // خلفية مقسمة
+            Column(
               children: [
-                Image.asset(
-                  'assets/images/Logo.png',
-                  width: 120.w,
-                  height: 120.w,
-                  color: AppTheme.primaryGreen,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(Icons.health_and_safety,
-                        size: 100.w, color: AppTheme.primaryGreen);
-                  },
-                ),
-                SizedBox(height: 24.h),
-                Text(
-                  'منصة صحتي بلس',
-                  style: TextStyle(
-                    fontSize: 24.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryGreen,
+                Container(
+                  height: MediaQuery.of(context).size.height * 0.35,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppTheme.primaryGreen,
+                        AppTheme.primaryGreen.withOpacity(0.8),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(30.r),
+                      bottomRight: Radius.circular(30.r),
+                    ),
                   ),
                 ),
-                SizedBox(height: 8.h),
-                Text(
-                  'تسجيل الدخول',
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    color: AppTheme.textColor,
-                  ),
-                ),
-                SizedBox(height: 48.h),
-                Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: EdgeInsets.all(24.w),
-                    child: FormBuilder(
-                      key: _formKey,
+                Expanded(child: Container()),
+              ],
+            ),
+
+            // محتوى الصفحة
+            SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.w),
+                child: Column(
+                  children: [
+                    SizedBox(height: 40.h),
+                    // الشعار والعنوان
+                    Center(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            'معلومات الدخول',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
+                          Container(
+                            padding: EdgeInsets.all(16.r),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: Image.asset(
+                              'assets/images/Logo.png',
+                              width: 80.w,
+                              height: 80.w,
                               color: AppTheme.primaryGreen,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Icons.health_and_safety,
+                                    size: 80.w, color: AppTheme.primaryGreen);
+                              },
                             ),
                           ),
-                          SizedBox(height: 24.h),
-                          _isLoading
-                              ? const Center(child: CircularProgressIndicator())
-                              : FormBuilderDropdown<UserProfile>(
-                                  name: 'user',
-                                  decoration: InputDecoration(
-                                    labelText: 'اختر المستخدم',
-                                    prefixIcon: const Icon(Icons.person),
-                                    suffixIcon: IconButton(
-                                      icon: const Icon(Icons.refresh),
-                                      onPressed: _loadUsers,
-                                    ),
-                                  ),
-                                  items: _users.map((user) {
-                                    return DropdownMenuItem(
-                                      value: user,
-                                      child: Text(user.email),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) => _selectedUser = value,
-                                  validator: FormBuilderValidators.required(
-                                      errorText: 'يرجى اختيار مستخدم'),
-                                ),
                           SizedBox(height: 16.h),
-                          FormBuilderTextField(
-                            name: 'password',
-                            obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              labelText: 'كلمة المرور',
-                              prefixIcon: const Icon(Icons.lock),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
+                          Text(
+                            'منصة صحتي بلس',
+                            style: TextStyle(
+                              fontSize: 28.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16.w, vertical: 8.h),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(20.r),
+                            ),
+                            child: Text(
+                              'تسجيل الدخول',
+                              style: TextStyle(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
                               ),
                             ),
-                            validator: FormBuilderValidators.required(
-                                errorText: 'يرجى إدخال كلمة المرور'),
-                          ),
-                          SizedBox(height: 8.h),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton(
-                              onPressed: _handleResetPassword,
-                              child: const Text('نسيت كلمة المرور؟'),
-                            ),
-                          ),
-                          SizedBox(height: 24.h),
-                          ElevatedButton(
-                            onPressed: _isLoading ? null : _handleLogin,
-                            child: _isLoading
-                                ? const CircularProgressIndicator()
-                                : const Text('دخول'),
-                          ),
-                          SizedBox(height: 16.h),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.pushNamed(context, '/register');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryGreen,
-                            ),
-                            child: const Text('إنشاء حساب جديد'),
-                          ),
-                          SizedBox(height: 16.h),
-                          OutlinedButton(
-                            onPressed: _checkDatabaseConnection,
-                            child: const Text('فحص الاتصال بقاعدة البيانات'),
-                          ),
-                          SizedBox(height: 8.h),
-                          OutlinedButton(
-                            onPressed: _createDemoUser,
-                            child: const Text('إنشاء مستخدم تجريبي'),
-                          ),
-                          SizedBox(height: 8.h),
-                          OutlinedButton(
-                            onPressed: _createTables,
-                            child: const Text('إنشاء الجداول'),
                           ),
                         ],
                       ),
                     ),
-                  ),
+
+                    SizedBox(height: 40.h),
+
+                    // بطاقة تسجيل الدخول
+                    Card(
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Container(
+                        padding: EdgeInsets.all(24.w),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20.r),
+                          color: Colors.white,
+                        ),
+                        child: FormBuilder(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // عنوان البطاقة
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.login_rounded,
+                                    color: AppTheme.primaryGreen,
+                                    size: 24.r,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'معلومات الدخول',
+                                    style: TextStyle(
+                                      fontSize: 20.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              Divider(
+                                  height: 32.h,
+                                  color: Colors.grey.withOpacity(0.3)),
+
+                              // حقل اختيار المستخدم
+                              _isLoading
+                                  ? const Center(
+                                      child: CircularProgressIndicator())
+                                  : FormBuilderDropdown<UserProfile>(
+                                      name: 'user',
+                                      decoration: InputDecoration(
+                                        labelText: 'اختر المستخدم',
+                                        hintText: 'اختر البريد الإلكتروني',
+                                        prefixIcon: const Icon(Icons.person,
+                                            color: AppTheme.primaryGreen),
+                                        suffixIcon: IconButton(
+                                          icon: const Icon(Icons.refresh,
+                                              color: AppTheme.primaryGreen),
+                                          onPressed: _loadUsers,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: const BorderSide(
+                                              color: AppTheme.primaryGreen,
+                                              width: 2),
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.grey.shade50,
+                                      ),
+                                      items: _users.map((user) {
+                                        return DropdownMenuItem(
+                                          value: user,
+                                          child: Text(user.email),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) =>
+                                          _selectedUser = value,
+                                      validator: FormBuilderValidators.required(
+                                          errorText: 'يرجى اختيار مستخدم'),
+                                      dropdownColor: Colors.white,
+                                    ),
+
+                              SizedBox(height: 20.h),
+
+                              // حقل كلمة المرور
+                              FormBuilderTextField(
+                                name: 'password',
+                                obscureText: _obscurePassword,
+                                decoration: InputDecoration(
+                                  labelText: 'كلمة المرور',
+                                  hintText: 'أدخل كلمة المرور',
+                                  prefixIcon: const Icon(Icons.lock,
+                                      color: AppTheme.primaryGreen),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: AppTheme.primaryGreen,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: const BorderSide(
+                                        color: AppTheme.primaryGreen, width: 2),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                validator: FormBuilderValidators.required(
+                                    errorText: 'يرجى إدخال كلمة المرور'),
+                              ),
+
+                              SizedBox(height: 12.h),
+
+                              // زر نسيت كلمة المرور
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: _handleResetPassword,
+                                  icon:
+                                      const Icon(Icons.help_outline, size: 18),
+                                  label: const Text('نسيت كلمة المرور؟'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: AppTheme.primaryGreen,
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 8.w, vertical: 4.h),
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(height: 24.h),
+
+                              // زر تسجيل الدخول
+                              ElevatedButton(
+                                onPressed: _isLoading ? null : _handleLogin,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryGreen,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: _isLoading
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white)
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.login),
+                                          SizedBox(width: 8.w),
+                                          const Text(
+                                            'تسجيل الدخول',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+
+                              SizedBox(height: 16.h),
+
+                              // زر إنشاء حساب جديد
+                              OutlinedButton(
+                                onPressed: () {
+                                  Navigator.pushNamed(context, '/register');
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.primaryGreen,
+                                  side: const BorderSide(
+                                      color: AppTheme.primaryGreen),
+                                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.person_add),
+                                    SizedBox(width: 8.w),
+                                    const Text(
+                                      'إنشاء حساب جديد',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 24.h),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+
+            // زر الرجوع
+            Positioned(
+              top: 16.h,
+              left: 16.w,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
         ),
       ),
     );

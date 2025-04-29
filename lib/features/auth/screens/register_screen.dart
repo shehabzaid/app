@@ -78,112 +78,520 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('إنشاء حساب جديد'),
-        centerTitle: true,
-      ),
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(24.w),
-          child: FormBuilder(
-            key: _formKey,
-            child: Column(
+        child: Stack(
+          children: [
+            // خلفية مقسمة
+            Column(
               children: [
-                FormBuilderTextField(
-                  name: 'fullName',
-                  decoration: const InputDecoration(labelText: 'الاسم الكامل'),
-                  validator: FormBuilderValidators.required(),
-                ),
-                SizedBox(height: 16.h),
-                FormBuilderTextField(
-                  name: 'email',
-                  decoration:
-                      const InputDecoration(labelText: 'البريد الإلكتروني'),
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(),
-                    FormBuilderValidators.email(),
-                  ]),
-                ),
-                SizedBox(height: 16.h),
-                FormBuilderTextField(
-                  name: 'phone',
-                  decoration: const InputDecoration(labelText: 'رقم الهاتف'),
-                  validator: FormBuilderValidators.required(),
-                ),
-                SizedBox(height: 16.h),
-                FormBuilderDropdown<String>(
-                  name: 'gender',
-                  decoration: const InputDecoration(labelText: 'الجنس'),
-                  items: const [
-                    DropdownMenuItem(value: 'ذكر', child: Text('ذكر')),
-                    DropdownMenuItem(value: 'أنثى', child: Text('أنثى')),
-                  ],
-                ),
-                SizedBox(height: 16.h),
-                FormBuilderDateTimePicker(
-                  name: 'birthDate',
-                  decoration: const InputDecoration(labelText: 'تاريخ الميلاد'),
-                  inputType: InputType.date,
-                ),
-                SizedBox(height: 16.h),
-                FormBuilderTextField(
-                  name: 'nationalId',
-                  decoration:
-                      const InputDecoration(labelText: 'رقم الهوية الوطنية'),
-                ),
-                SizedBox(height: 16.h),
-                FormBuilderTextField(
-                  name: 'password',
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'كلمة المرور',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                Container(
+                  height: MediaQuery.of(context).size.height * 0.25,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppTheme.primaryGreen,
+                        AppTheme.primaryGreen.withOpacity(0.8),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(30.r),
+                      bottomRight: Radius.circular(30.r),
                     ),
                   ),
-                  validator: FormBuilderValidators.minLength(6),
                 ),
-                SizedBox(height: 16.h),
-                FormBuilderTextField(
-                  name: 'confirmPassword',
-                  obscureText: _obscureConfirmPassword,
-                  decoration: InputDecoration(
-                    labelText: 'تأكيد كلمة المرور',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                    ),
-                  ),
-                  validator: FormBuilderValidators.required(),
-                ),
-                SizedBox(height: 24.h),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _handleRegister,
-                  child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('إنشاء حساب'),
-                ),
+                Expanded(child: Container()),
               ],
             ),
-          ),
+
+            // محتوى الصفحة
+            SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.w),
+                child: Column(
+                  children: [
+                    SizedBox(height: 20.h),
+
+                    // العنوان
+                    Center(
+                      child: Column(
+                        children: [
+                          Text(
+                            'إنشاء حساب جديد',
+                            style: TextStyle(
+                              fontSize: 26.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16.w, vertical: 8.h),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(20.r),
+                            ),
+                            child: Text(
+                              'منصة صحتي بلس',
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: 30.h),
+
+                    // بطاقة التسجيل
+                    Card(
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Container(
+                        padding: EdgeInsets.all(24.w),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20.r),
+                          color: Colors.white,
+                        ),
+                        child: FormBuilder(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // عنوان البطاقة
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.person_add_rounded,
+                                    color: AppTheme.primaryGreen,
+                                    size: 24.r,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'معلومات المستخدم',
+                                    style: TextStyle(
+                                      fontSize: 20.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              Divider(
+                                  height: 32.h,
+                                  color: Colors.grey.withOpacity(0.3)),
+
+                              // المعلومات الشخصية
+                              Text(
+                                'المعلومات الشخصية',
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              SizedBox(height: 16.h),
+
+                              // الاسم الكامل
+                              FormBuilderTextField(
+                                name: 'fullName',
+                                decoration: InputDecoration(
+                                  labelText: 'الاسم الكامل',
+                                  hintText: 'أدخل الاسم الكامل',
+                                  prefixIcon: const Icon(Icons.person,
+                                      color: AppTheme.primaryGreen),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: const BorderSide(
+                                        color: AppTheme.primaryGreen, width: 2),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                validator: FormBuilderValidators.required(
+                                    errorText: 'يرجى إدخال الاسم الكامل'),
+                              ),
+                              SizedBox(height: 16.h),
+
+                              // البريد الإلكتروني
+                              FormBuilderTextField(
+                                name: 'email',
+                                decoration: InputDecoration(
+                                  labelText: 'البريد الإلكتروني',
+                                  hintText: 'أدخل البريد الإلكتروني',
+                                  prefixIcon: const Icon(Icons.email,
+                                      color: AppTheme.primaryGreen),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: const BorderSide(
+                                        color: AppTheme.primaryGreen, width: 2),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                validator: FormBuilderValidators.compose([
+                                  FormBuilderValidators.required(
+                                      errorText:
+                                          'يرجى إدخال البريد الإلكتروني'),
+                                  FormBuilderValidators.email(
+                                      errorText:
+                                          'يرجى إدخال بريد إلكتروني صحيح'),
+                                ]),
+                              ),
+                              SizedBox(height: 16.h),
+
+                              // رقم الهاتف
+                              FormBuilderTextField(
+                                name: 'phone',
+                                decoration: InputDecoration(
+                                  labelText: 'رقم الهاتف',
+                                  hintText: 'أدخل رقم الهاتف',
+                                  prefixIcon: const Icon(Icons.phone,
+                                      color: AppTheme.primaryGreen),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: const BorderSide(
+                                        color: AppTheme.primaryGreen, width: 2),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                validator: FormBuilderValidators.required(
+                                    errorText: 'يرجى إدخال رقم الهاتف'),
+                              ),
+                              SizedBox(height: 16.h),
+
+                              // صف الجنس وتاريخ الميلاد
+                              Row(
+                                children: [
+                                  // الجنس
+                                  Expanded(
+                                    child: FormBuilderDropdown<String>(
+                                      name: 'gender',
+                                      decoration: InputDecoration(
+                                        labelText: 'الجنس',
+                                        hintText: 'اختر الجنس',
+                                        prefixIcon: const Icon(Icons.people,
+                                            color: AppTheme.primaryGreen),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: const BorderSide(
+                                              color: AppTheme.primaryGreen,
+                                              width: 2),
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.grey.shade50,
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(
+                                            value: 'ذكر', child: Text('ذكر')),
+                                        DropdownMenuItem(
+                                            value: 'أنثى', child: Text('أنثى')),
+                                      ],
+                                      dropdownColor: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(width: 16.w),
+
+                                  // تاريخ الميلاد
+                                  Expanded(
+                                    child: FormBuilderDateTimePicker(
+                                      name: 'birthDate',
+                                      decoration: InputDecoration(
+                                        labelText: 'تاريخ الميلاد',
+                                        hintText: 'اختر التاريخ',
+                                        prefixIcon: const Icon(
+                                            Icons.calendar_today,
+                                            color: AppTheme.primaryGreen),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: const BorderSide(
+                                              color: AppTheme.primaryGreen,
+                                              width: 2),
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.grey.shade50,
+                                      ),
+                                      inputType: InputType.date,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 16.h),
+
+                              // رقم الهوية الوطنية
+                              FormBuilderTextField(
+                                name: 'nationalId',
+                                decoration: InputDecoration(
+                                  labelText: 'رقم الهوية الوطنية',
+                                  hintText: 'أدخل رقم الهوية الوطنية',
+                                  prefixIcon: const Icon(Icons.badge,
+                                      color: AppTheme.primaryGreen),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: const BorderSide(
+                                        color: AppTheme.primaryGreen, width: 2),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                              ),
+
+                              SizedBox(height: 24.h),
+
+                              // معلومات الحساب
+                              Text(
+                                'معلومات الحساب',
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              SizedBox(height: 16.h),
+
+                              // كلمة المرور
+                              FormBuilderTextField(
+                                name: 'password',
+                                obscureText: _obscurePassword,
+                                decoration: InputDecoration(
+                                  labelText: 'كلمة المرور',
+                                  hintText: 'أدخل كلمة المرور',
+                                  prefixIcon: const Icon(Icons.lock,
+                                      color: AppTheme.primaryGreen),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: AppTheme.primaryGreen,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: const BorderSide(
+                                        color: AppTheme.primaryGreen, width: 2),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                validator: FormBuilderValidators.compose([
+                                  FormBuilderValidators.required(
+                                      errorText: 'يرجى إدخال كلمة المرور'),
+                                  FormBuilderValidators.minLength(6,
+                                      errorText:
+                                          'يجب أن تكون كلمة المرور 6 أحرف على الأقل'),
+                                ]),
+                              ),
+                              SizedBox(height: 16.h),
+
+                              // تأكيد كلمة المرور
+                              FormBuilderTextField(
+                                name: 'confirmPassword',
+                                obscureText: _obscureConfirmPassword,
+                                decoration: InputDecoration(
+                                  labelText: 'تأكيد كلمة المرور',
+                                  hintText: 'أعد إدخال كلمة المرور',
+                                  prefixIcon: const Icon(Icons.lock_outline,
+                                      color: AppTheme.primaryGreen),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureConfirmPassword
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: AppTheme.primaryGreen,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureConfirmPassword =
+                                            !_obscureConfirmPassword;
+                                      });
+                                    },
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: const BorderSide(
+                                        color: AppTheme.primaryGreen, width: 2),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                validator: FormBuilderValidators.required(
+                                    errorText: 'يرجى تأكيد كلمة المرور'),
+                              ),
+
+                              SizedBox(height: 32.h),
+
+                              // زر إنشاء الحساب
+                              ElevatedButton(
+                                onPressed: _isLoading ? null : _handleRegister,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryGreen,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: _isLoading
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white)
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.person_add),
+                                          SizedBox(width: 8.w),
+                                          const Text(
+                                            'إنشاء حساب جديد',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+
+                              SizedBox(height: 16.h),
+
+                              // زر العودة لتسجيل الدخول
+                              TextButton(
+                                onPressed: () => Navigator.pushReplacementNamed(
+                                    context, '/login'),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.arrow_back_ios, size: 16),
+                                    SizedBox(width: 8.w),
+                                    const Text(
+                                        'لديك حساب بالفعل؟ تسجيل الدخول'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 24.h),
+                  ],
+                ),
+              ),
+            ),
+
+            // زر الرجوع
+            Positioned(
+              top: 16.h,
+              left: 16.w,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
         ),
       ),
     );

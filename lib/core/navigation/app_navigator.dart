@@ -326,6 +326,35 @@ class AppNavigator {
     Navigator.pushNamed(context, '/admin/manage-facilities');
   }
 
+  /// التنقل إلى شاشة مواعيد الطبيب
+  static void navigateToDoctorAppointments(
+      BuildContext context, String doctorId) {
+    Navigator.pushNamed(
+      context,
+      '/doctor-appointments',
+      arguments: {'doctorId': doctorId},
+    );
+  }
+
+  /// التنقل إلى شاشة مرضى الطبيب
+  static void navigateToDoctorPatients(BuildContext context, String doctorId) {
+    Navigator.pushNamed(
+      context,
+      '/doctor-patients',
+      arguments: {'doctorId': doctorId},
+    );
+  }
+
+  /// التنقل إلى شاشة السجلات الطبية للطبيب
+  static void navigateToDoctorMedicalRecords(
+      BuildContext context, String doctorId) {
+    Navigator.pushNamed(
+      context,
+      '/doctor-medical-records',
+      arguments: {'doctorId': doctorId},
+    );
+  }
+
   /// Cierra sesión y navega a la pantalla de inicio de sesión
   static Future<void> logout(BuildContext context) async {
     try {

@@ -89,25 +89,83 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _showLoginRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تسجيل الدخول مطلوب'),
+        content: const Text(
+            'يجب تسجيل الدخول للوصول إلى هذه الخدمة. هل تريد تسجيل الدخول الآن؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/login');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+            ),
+            child: const Text('تسجيل الدخول'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تأكيد تسجيل الخروج'),
+        content: const Text('هل أنت متأكد من رغبتك في تسجيل الخروج؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _handleLogout(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('تسجيل الخروج'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isLoggedIn = _supabase.auth.currentUser != null;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+        backgroundColor: AppTheme.primaryGreen,
+        foregroundColor: Colors.white,
+        centerTitle: false,
         title: Row(
           children: [
             CircleAvatar(
-              radius: 20.r,
-              backgroundColor: AppTheme.primaryGreen.withOpacity(0.2),
+              radius: 18.r,
+              backgroundColor: Colors.white.withOpacity(0.3),
               child: Icon(
                 Icons.person,
-                color: AppTheme.primaryGreen,
-                size: 24.r,
+                color: Colors.white,
+                size: 22.r,
               ),
             ),
-            SizedBox(width: 12.w),
+            SizedBox(width: 10.w),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -115,15 +173,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   'مرحباً،',
                   style: TextStyle(
-                    fontSize: 14.sp,
-                    color: Colors.grey[600],
+                    fontSize: 12.sp,
+                    color: Colors.white.withOpacity(0.9),
                   ),
                 ),
                 Text(
                   _userName ?? 'زائر',
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ],
@@ -131,10 +190,65 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          // زر تسجيل الدخول للزائر
+          if (!isLoggedIn)
+            Container(
+              margin: EdgeInsets.only(left: 8.w),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.login,
+                    color: AppTheme.primaryGreen, size: 18),
+                label: Text(
+                  'تسجيل الدخول',
+                  style: TextStyle(
+                    color: AppTheme.primaryGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.sp,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/login');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                ),
+              ),
+            ),
+          // زر تسجيل الخروج للمستخدمين المسجلين
+          if (isLoggedIn)
+            Container(
+              margin: EdgeInsets.only(left: 8.w),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.logout, color: Colors.white, size: 18),
+                label: Text(
+                  'تسجيل الخروج',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.sp,
+                  ),
+                ),
+                onPressed: () => _showLogoutConfirmationDialog(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.withOpacity(0.8),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                ),
+              ),
+            ),
           IconButton(
             icon: Stack(
               children: [
-                const Icon(Icons.notifications_outlined),
+                const Icon(Icons.notifications_outlined, color: Colors.white),
                 Positioned(
                   right: 0,
                   top: 0,
@@ -166,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
+            icon: const Icon(Icons.settings_outlined, color: Colors.white),
             onPressed: () {
               Navigator.pushNamed(context, '/settings');
             },
@@ -498,6 +612,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickAccess() {
+    final bool isLoggedIn = _supabase.auth.currentUser != null;
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       child: Column(
@@ -522,6 +638,35 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           SizedBox(height: 16.h),
+
+          // إذا كان المستخدم غير مسجل، نعرض زر تسجيل الدخول بشكل بارز
+          if (!isLoggedIn)
+            Container(
+              margin: EdgeInsets.only(bottom: 16.h),
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.login),
+                label: Text(
+                  'تسجيل الدخول للوصول إلى كافة الخدمات',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/login');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+              ),
+            ),
+
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
@@ -549,14 +694,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: 'ملفي الطبي',
                 description: 'سجلاتك الطبية',
                 color: Colors.purple,
-                onTap: () => AppNavigator.navigateToMedicalRecords(context),
+                onTap: () {
+                  if (isLoggedIn) {
+                    AppNavigator.navigateToMedicalRecords(context);
+                  } else {
+                    _showLoginRequiredDialog(context);
+                  }
+                },
               ),
               _quickButton(
                 icon: Icons.calendar_today,
                 label: 'حجوزاتي',
                 description: 'إدارة المواعيد',
                 color: Colors.orange,
-                onTap: () => Navigator.pushNamed(context, '/my-appointments'),
+                onTap: () {
+                  if (isLoggedIn) {
+                    Navigator.pushNamed(context, '/my-appointments');
+                  } else {
+                    _showLoginRequiredDialog(context);
+                  }
+                },
               ),
             ],
           ),
@@ -978,7 +1135,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           label: const Text('التفاصيل'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.primaryGreen,
-                            side: BorderSide(color: AppTheme.primaryGreen),
+                            side:
+                                const BorderSide(color: AppTheme.primaryGreen),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8.r),
                             ),
