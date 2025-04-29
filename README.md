@@ -84,8 +84,8 @@ server {
 1. تأكد من تثبيت Flutter SDK على جهازك
 2. استنساخ المشروع:
    ```bash
-   git clone https://github.com/yourusername/sehaty-plus.git
-   cd sehaty-plus
+   git clone https://github.com/shehabzaid/app.git
+   cd app
    ```
 3. تثبيت التبعيات:
    ```bash
@@ -95,6 +95,21 @@ server {
    ```bash
    flutter run
    ```
+
+## الإصدارات المتاحة
+
+### Android
+يمكنك بناء نسخة Android باستخدام:
+```bash
+flutter build apk --release
+```
+ستجد ملف APK في `build/app/outputs/flutter-apk/app-release.apk`
+
+### iOS
+لبناء نسخة iOS، راجع التعليمات في [دليل بناء iOS](ios/README_IOS_BUILD.md)
+
+### نسخة الويب
+تم بناء نسخة ويب يمكن استخدامها على أي جهاز بما في ذلك أجهزة iPhone. لمزيد من المعلومات، راجع [دليل نسخة الويب](README_WEB_VERSION.md)
 
 ## هيكل المشروع
 
