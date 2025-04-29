@@ -27,6 +27,8 @@ class SupabaseConfig {
   static const String appointmentsTable = 'appointments';
   static const String medicalRecordsTable = 'medical_records';
   static const String reviewsTable = 'reviews';
+  static const String advertisementsTable = 'advertisements';
+  static const String notificationsTable = 'notifications';
 
   // Storage bucket names
   static const String profilePicturesBucket = 'profile_pictures';

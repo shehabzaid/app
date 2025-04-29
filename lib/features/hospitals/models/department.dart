@@ -25,20 +25,23 @@ class Department {
   factory Department.fromJson(Map<String, dynamic> json) {
     return Department(
       id: json['id'] as String,
-      hospitalId: json['hospital_id'] as String,
+      hospitalId:
+          json['facility_id'] as String, // تغيير من hospital_id إلى facility_id
       nameArabic: json['name_arabic'] as String,
       nameEnglish: json['name_english'] as String?,
       descriptionArabic: json['description_arabic'] as String?,
       descriptionEnglish: json['description_english'] as String?,
       isActive: json['is_active'] as bool? ?? true,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'hospital_id': hospitalId,
+      'facility_id': hospitalId, // تغيير من hospital_id إلى facility_id
       'name_arabic': nameArabic,
       'name_english': nameEnglish,
       'description_arabic': descriptionArabic,

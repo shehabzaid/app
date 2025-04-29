@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'dart:developer' as developer;
 import '../../../core/theme/app_theme.dart';
 import '../models/review.dart';
 import '../services/review_service.dart';
@@ -27,7 +28,7 @@ class _RateDoctorScreenState extends State<RateDoctorScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   final ReviewService _reviewService = ReviewService();
   final AuthService _authService = AuthService();
-  
+
   bool _isLoading = false;
   int _rating = 0;
   String? _userId;
@@ -59,10 +60,29 @@ class _RateDoctorScreenState extends State<RateDoctorScreen> {
         _userId = currentUser.id;
       });
 
-      final hasReview = await _reviewService.hasPatientReviewedDoctor(
-        currentUser.id,
-        widget.doctorId,
-      );
+      bool hasReview = false;
+
+      try {
+        // التحقق من وجود تقييم للموعد إذا تم تمرير معرف الموعد
+        if (widget.appointmentId != null) {
+          hasReview = await _reviewService
+              .hasAppointmentBeenReviewed(widget.appointmentId!);
+          developer.log(
+              'Checked review for appointment ${widget.appointmentId}: $hasReview');
+        } else {
+          // التحقق من وجود تقييم للطبيب بشكل عام
+          hasReview = await _reviewService.hasPatientReviewedDoctor(
+            currentUser.id,
+            widget.doctorId,
+          );
+          developer
+              .log('Checked review for doctor ${widget.doctorId}: $hasReview');
+        }
+      } catch (e) {
+        developer.log('Error checking existing review: $e');
+        // في حالة حدوث خطأ، نفترض أنه لا يوجد تقييم
+        hasReview = false;
+      }
 
       setState(() {
         _hasExistingReview = hasReview;
@@ -77,6 +97,7 @@ class _RateDoctorScreenState extends State<RateDoctorScreen> {
         );
       }
     } catch (e) {
+      developer.log('Error in _checkExistingReview: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -174,7 +195,9 @@ class _RateDoctorScreenState extends State<RateDoctorScreen> {
                         ),
                       )
                     : Text(
-                        _hasExistingReview ? 'تم التقييم مسبقاً' : 'إرسال التقييم',
+                        _hasExistingReview
+                            ? 'تم التقييم مسبقاً'
+                            : 'إرسال التقييم',
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.bold,
@@ -224,16 +247,42 @@ class _RateDoctorScreenState extends State<RateDoctorScreen> {
         final formData = _formKey.currentState!.value;
         final comment = formData['comment'] as String?;
 
+        developer.log(
+            'Creating review for doctor ${widget.doctorId} by user $_userId');
+        if (widget.appointmentId != null) {
+          developer.log('Review is for appointment ${widget.appointmentId}');
+        }
+
         final review = Review(
-          id: '', // Se generará automáticamente en la base de datos
+          id: '', // سيتم إنشاؤه تلقائيًا في قاعدة البيانات
           patientId: _userId!,
           doctorId: widget.doctorId,
+          appointmentId:
+              widget.appointmentId, // إضافة معرف الموعد إذا كان متوفرًا
           rating: _rating,
           comment: comment,
+          isApproved: true,
           createdAt: DateTime.now(),
         );
 
-        await _reviewService.addReview(review);
+        try {
+          final createdReview = await _reviewService.addReview(review);
+          developer
+              .log('Review created successfully with ID: ${createdReview.id}');
+        } catch (e) {
+          developer.log('Error adding review: $e');
+          // إذا فشلت إضافة التقييم، نحاول مرة أخرى بدون معرف الموعد
+          if (widget.appointmentId != null &&
+              e.toString().contains('column "appointment_id" does not exist')) {
+            developer.log('Retrying without appointment_id');
+            final reviewWithoutAppointment =
+                review.copyWith(appointmentId: null);
+            await _reviewService.addReview(reviewWithoutAppointment);
+          } else {
+            // إعادة رمي الخطأ إذا كان لسبب آخر
+            rethrow;
+          }
+        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -245,6 +294,7 @@ class _RateDoctorScreenState extends State<RateDoctorScreen> {
           Navigator.pop(context, true);
         }
       } catch (e) {
+        developer.log('Error in _submitReview: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

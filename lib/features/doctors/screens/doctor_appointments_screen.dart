@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../../../core/navigation/app_navigator.dart';
 
 class DoctorAppointmentsScreen extends StatefulWidget {
   final String doctorId;
@@ -13,7 +14,8 @@ class DoctorAppointmentsScreen extends StatefulWidget {
   });
 
   @override
-  State<DoctorAppointmentsScreen> createState() => _DoctorAppointmentsScreenState();
+  State<DoctorAppointmentsScreen> createState() =>
+      _DoctorAppointmentsScreenState();
 }
 
 class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
@@ -21,7 +23,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
   CalendarFormat _calendarFormat = CalendarFormat.week;
-  
+
   Map<DateTime, List<Map<String, dynamic>>> _appointments = {};
   List<Map<String, dynamic>> _selectedDayAppointments = [];
 
@@ -34,11 +36,11 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   Future<void> _loadAppointments() async {
     // TODO: Implement actual API call to load appointments
     await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
-    
+
     // Mock data for demonstration
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
+
     final Map<DateTime, List<Map<String, dynamic>>> appointments = {
       today: [
         {
@@ -113,7 +115,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
         },
       ],
     };
-    
+
     setState(() {
       _appointments = appointments;
       _selectedDayAppointments = appointments[_selectedDay] ?? [];
@@ -160,7 +162,8 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                       lastDay: DateTime.utc(2025, 12, 31),
                       focusedDay: _focusedDay,
                       calendarFormat: _calendarFormat,
-                      selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                      selectedDayPredicate: (day) =>
+                          isSameDay(_selectedDay, day),
                       eventLoader: _getAppointmentsForDay,
                       startingDayOfWeek: StartingDayOfWeek.saturday,
                       calendarStyle: CalendarStyle(
@@ -201,7 +204,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                     ),
                   ),
                 ),
-                
+
                 // عنوان قائمة المواعيد
                 Padding(
                   padding: EdgeInsets.all(16.w),
@@ -225,7 +228,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                     ],
                   ),
                 ),
-                
+
                 // قائمة المواعيد
                 Expanded(
                   child: _selectedDayAppointments.isEmpty
@@ -278,9 +281,10 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       default:
         statusColor = Colors.grey;
     }
-    
-    final isPast = appointment['status'] == 'مكتمل' || appointment['status'] == 'ملغي';
-    
+
+    final isPast =
+        appointment['status'] == 'مكتمل' || appointment['status'] == 'ملغي';
+
     return Card(
       margin: EdgeInsets.only(bottom: 12.h),
       elevation: 1,
@@ -289,7 +293,11 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       ),
       child: InkWell(
         onTap: () {
-          // TODO: Navigate to patient details or appointment details
+          // التنقل إلى تفاصيل الموعد للطبيب
+          AppNavigator.navigateToDoctorAppointmentDetails(
+            context,
+            appointment['id'],
+          );
         },
         borderRadius: BorderRadius.circular(8),
         child: Padding(
@@ -316,7 +324,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                 ),
               ),
               SizedBox(width: 12.w),
-              
+
               // معلومات المريض
               Expanded(
                 child: Column(
@@ -348,7 +356,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                   ],
                 ),
               ),
-              
+
               // أزرار الإجراءات
               Column(
                 children: [
@@ -371,12 +379,16 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                     ),
                   ),
                   SizedBox(height: 8.h),
-                  
+
                   // زر الإجراء
                   if (!isPast)
                     ElevatedButton(
                       onPressed: () {
-                        // TODO: Navigate to patient details screen
+                        // التنقل إلى تفاصيل الموعد للطبيب
+                        AppNavigator.navigateToDoctorAppointmentDetails(
+                          context,
+                          appointment['id'],
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryGreen,

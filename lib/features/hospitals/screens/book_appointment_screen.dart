@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:developer' as developer;
 import '../services/hospital_service.dart';
 import '../models/doctor.dart';
 import 'package:intl/intl.dart' as intl;
@@ -31,7 +33,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   List<Doctor> _doctors = [];
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  final CalendarFormat _calendarFormat = CalendarFormat.month;
   List<Map<String, dynamic>> _availableSlots = [];
   Map<String, dynamic>? _selectedSlot;
 
@@ -45,13 +47,39 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     try {
       setState(() => _isLoading = true);
 
-      final doctors =
-          await _hospitalService.getDepartmentDoctors(widget.departmentId);
+      List<Doctor> doctors = [];
+
+      // إذا كان معرف القسم فارغًا، نحاول الحصول على الطبيب مباشرة
+      if (widget.departmentId.isEmpty && widget.doctorId != null) {
+        try {
+          final doctor =
+              await _hospitalService.getDoctorDetails(widget.doctorId!);
+          doctors = [doctor];
+          developer.log('Loaded doctor directly: ${doctor.nameArabic}');
+        } catch (e) {
+          developer.log('Error loading doctor directly: $e');
+          // إذا فشل، نحاول الحصول على جميع أطباء المستشفى
+          doctors =
+              await _hospitalService.getDoctorsByHospital(widget.hospitalId);
+        }
+      } else {
+        // الحصول على أطباء القسم
+        doctors =
+            await _hospitalService.getDepartmentDoctors(widget.departmentId);
+      }
 
       setState(() {
         _doctors = doctors;
-        if (widget.doctorId != null) {
-          _selectedDoctor = doctors.firstWhere((d) => d.id == widget.doctorId);
+        if (widget.doctorId != null && doctors.isNotEmpty) {
+          try {
+            _selectedDoctor =
+                doctors.firstWhere((d) => d.id == widget.doctorId);
+          } catch (e) {
+            // إذا لم يتم العثور على الطبيب في القائمة، نستخدم الطبيب الأول
+            if (doctors.isNotEmpty) {
+              _selectedDoctor = doctors.first;
+            }
+          }
         }
         _error = '';
       });
@@ -60,6 +88,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         await _loadAvailableSlots();
       }
     } catch (e) {
+      developer.log('Error in _loadDoctors: $e');
       setState(() => _error = e.toString());
     } finally {
       setState(() => _isLoading = false);
@@ -97,9 +126,32 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     try {
       setState(() => _isLoading = true);
 
+      // الحصول على معرف المستخدم الحالي من خدمة المصادقة
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      final patientId = currentUser?.id ?? '';
+
+      if (patientId.isEmpty) {
+        // إذا لم يكن المستخدم مسجل الدخول، نطلب منه تسجيل الدخول
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('يرجى تسجيل الدخول أولاً لحجز موعد'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          // التنقل إلى صفحة تسجيل الدخول مع الاحتفاظ بالمسار الحالي
+          Navigator.pushNamedAndRemoveUntil(
+              context, '/login', (route) => false);
+        }
+        return;
+      }
+
       await _hospitalService.bookAppointment(
-        patientId: 'current_user_id', // TODO: Get from auth service
+        patientId: patientId,
         appointmentId: _selectedSlot!['id'],
+        hospitalId: widget.hospitalId,
+        departmentId: widget.departmentId,
+        doctorId: _selectedDoctor?.id,
         notes: _notesController.text,
       );
 
@@ -113,9 +165,20 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      developer.log('Error booking appointment: $e');
+      if (mounted) {
+        setState(() => _error = e.toString());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل في حجز الموعد: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

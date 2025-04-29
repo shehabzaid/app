@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer' as developer;
+import 'package:uuid/uuid.dart';
 import '../../../core/config/supabase_config.dart';
 import '../models/appointment.dart';
 
@@ -19,7 +20,9 @@ class AppointmentService {
 
       developer.log('Appointments response received');
 
-      return (response as List).map((json) => Appointment.fromJson(json)).toList();
+      return (response as List)
+          .map((json) => Appointment.fromJson(json))
+          .toList();
     } catch (e, stackTrace) {
       developer.log('Error fetching appointments: $e');
       developer.log('Stack trace: $stackTrace');
@@ -40,7 +43,9 @@ class AppointmentService {
 
       developer.log('Appointments response received');
 
-      return (response as List).map((json) => Appointment.fromJson(json)).toList();
+      return (response as List)
+          .map((json) => Appointment.fromJson(json))
+          .toList();
     } catch (e, stackTrace) {
       developer.log('Error fetching appointments: $e');
       developer.log('Stack trace: $stackTrace');
@@ -61,7 +66,9 @@ class AppointmentService {
 
       developer.log('Appointments response received');
 
-      return (response as List).map((json) => Appointment.fromJson(json)).toList();
+      return (response as List)
+          .map((json) => Appointment.fromJson(json))
+          .toList();
     } catch (e, stackTrace) {
       developer.log('Error fetching appointments: $e');
       developer.log('Stack trace: $stackTrace');
@@ -85,23 +92,37 @@ class AppointmentService {
   }
 
   // حجز موعد جديد
-  Future<void> bookAppointment(Appointment appointment) async {
+  Future<Appointment?> bookAppointment(Appointment appointment) async {
     try {
+      // Generate a UUID for the appointment if it doesn't have one
+      final appointmentData = appointment.toJson();
+      if (appointmentData['id'] == null ||
+          appointmentData['id'].toString().isEmpty) {
+        // Use the uuid package to generate a proper UUID
+        appointmentData['id'] = const Uuid().v4();
+        developer
+            .log('Generated UUID for appointment: ${appointmentData['id']}');
+      }
+
       await _supabase
           .from(SupabaseConfig.appointmentsTable)
-          .insert(appointment.toJson());
+          .insert(appointmentData);
+
+      // Return the appointment with the generated ID
+      return Appointment.fromJson(appointmentData);
     } catch (e) {
+      developer.log('Error booking appointment: $e');
       throw Exception('فشل في حجز الموعد: $e');
     }
   }
 
   // تحديث حالة موعد
-  Future<void> updateAppointmentStatus(String appointmentId, String status) async {
+  Future<void> updateAppointmentStatus(
+      String appointmentId, String status) async {
     try {
       await _supabase
           .from(SupabaseConfig.appointmentsTable)
-          .update({'status': status})
-          .eq('id', appointmentId);
+          .update({'status': status}).eq('id', appointmentId);
     } catch (e) {
       throw Exception('فشل في تحديث حالة الموعد: $e');
     }

@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'dart:developer' as developer;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/navigation/app_navigator.dart';
+import '../models/notification_model.dart';
+import '../services/notification_service.dart';
+import '../../../core/widgets/loading_indicator.dart';
+import '../../../core/widgets/error_view.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
@@ -11,8 +18,11 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  final NotificationService _notificationService = NotificationService();
   bool _isLoading = false;
-  List<Map<String, dynamic>> _notifications = [];
+  bool _hasError = false;
+  String _errorMessage = '';
+  List<NotificationModel> _notifications = [];
 
   @override
   void initState() {
@@ -23,134 +33,201 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _loadNotifications() async {
     setState(() {
       _isLoading = true;
+      _hasError = false;
     });
 
-    // TODO: Implement actual notification loading from backend
-    // This is just mock data for now
-    await Future.delayed(const Duration(seconds: 1));
-    
-    setState(() {
-      _notifications = [
-        {
-          'id': '1',
-          'title': 'تم تأكيد موعدك',
-          'body': 'تم تأكيد موعدك مع الدكتور أحمد في مستشفى الملك فهد يوم الأربعاء 15 مارس الساعة 10:00 صباحاً',
-          'type': 'appointment',
-          'read': false,
-          'created_at': DateTime.now().subtract(const Duration(hours: 2)),
-        },
-        {
-          'id': '2',
-          'title': 'تذكير بموعدك غداً',
-          'body': 'تذكير بموعدك غداً مع الدكتور محمد في مستشفى الملك فيصل الساعة 2:30 مساءً',
-          'type': 'reminder',
-          'read': true,
-          'created_at': DateTime.now().subtract(const Duration(days: 1)),
-        },
-        {
-          'id': '3',
-          'title': 'تم إضافة سجل طبي جديد',
-          'body': 'قام الدكتور خالد بإضافة سجل طبي جديد لملفك الطبي',
-          'type': 'medical_record',
-          'read': false,
-          'created_at': DateTime.now().subtract(const Duration(days: 3)),
-        },
-        {
-          'id': '4',
-          'title': 'تم إلغاء موعدك',
-          'body': 'تم إلغاء موعدك مع الدكتور فهد في مستشفى الملك خالد يوم الخميس 23 مارس',
-          'type': 'appointment',
-          'read': true,
-          'created_at': DateTime.now().subtract(const Duration(days: 5)),
-        },
-      ];
-      _isLoading = false;
-    });
+    try {
+      final userId = await _getCurrentUserId();
+      if (userId == null) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'لم يتم العثور على المستخدم. يرجى تسجيل الدخول.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final notifications = await _notificationService
+          .getUserNotifications(userId, forceRefresh: true);
+
+      if (mounted) {
+        setState(() {
+          _notifications = notifications;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      developer.log('Error loading notifications: $e');
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'فشل في تحميل الإشعارات: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<String?> _getCurrentUserId() async {
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    return currentUser?.id;
+  }
+
+  Future<void> _markAsRead(NotificationModel notification) async {
+    try {
+      await _notificationService.markNotificationAsRead(notification.id);
+
+      // تحديث القائمة محليًا
+      setState(() {
+        final index = _notifications.indexWhere((n) => n.id == notification.id);
+        if (index != -1) {
+          _notifications[index] = notification.copyWith(isRead: true);
+        }
+      });
+
+      // التنقل حسب نوع الإشعار
+      _navigateBasedOnNotificationType(notification);
+    } catch (e) {
+      developer.log('Error marking notification as read: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل في تحديث حالة الإشعار: $e')),
+      );
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    try {
+      final userId = await _getCurrentUserId();
+      if (userId == null) return;
+
+      await _notificationService.markAllNotificationsAsRead(userId);
+
+      // تحديث القائمة محليًا
+      setState(() {
+        _notifications = _notifications
+            .map((notification) => notification.copyWith(isRead: true))
+            .toList();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم تعيين جميع الإشعارات كمقروءة')),
+      );
+    } catch (e) {
+      developer.log('Error marking all notifications as read: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل في تحديث حالة الإشعارات: $e')),
+      );
+    }
+  }
+
+  void _navigateBasedOnNotificationType(NotificationModel notification) {
+    if (!mounted) return;
+
+    // التنقل حسب نوع الإشعار
+    switch (notification.type) {
+      case 'appointment':
+        if (notification.referenceId != null) {
+          AppNavigator.navigateToAppointmentDetails(
+              context, notification.referenceId!);
+        }
+        break;
+      case 'medical_record':
+        if (notification.referenceId != null) {
+          AppNavigator.navigateToMedicalRecordDetails(
+              context, notification.referenceId!);
+        }
+        break;
+      // يمكن إضافة المزيد من أنواع الإشعارات هنا
+      default:
+        // لا شيء للتنقل إليه
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final unreadCount = _notifications.where((n) => !n.isRead).length;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('الإشعارات'),
         centerTitle: true,
         actions: [
-          if (_notifications.isNotEmpty)
+          if (unreadCount > 0)
             IconButton(
-              icon: const Icon(Icons.delete_sweep),
-              onPressed: _showClearAllDialog,
-              tooltip: 'حذف جميع الإشعارات',
+              icon: const Icon(Icons.done_all),
+              tooltip: 'تعيين الكل كمقروء',
+              onPressed: _markAllAsRead,
             ),
         ],
       ),
-      body: _buildBody(),
+      body: _isLoading
+          ? const LoadingIndicator()
+          : _hasError
+              ? ErrorView(
+                  error: _errorMessage,
+                  onRetry: _loadNotifications,
+                )
+              : _notifications.isEmpty
+                  ? _buildEmptyState()
+                  : RefreshIndicator(
+                      onRefresh: _loadNotifications,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(8),
+                        itemCount: _notifications.length,
+                        itemBuilder: (context, index) {
+                          return _buildNotificationCard(_notifications[index]);
+                        },
+                      ),
+                    ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    if (_notifications.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.notifications_off,
-              size: 64.sp,
-              color: Colors.grey,
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.notifications_off_outlined,
+            size: 80.w,
+            color: Colors.grey,
+          ),
+          SizedBox(height: 16.h),
+          const Text(
+            'لا توجد إشعارات',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-            SizedBox(height: 16.h),
-            Text(
-              'لا توجد إشعارات',
-              style: TextStyle(
-                fontSize: 18.sp,
-                color: Colors.grey[700],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadNotifications,
-      child: ListView.builder(
-        padding: EdgeInsets.all(8.w),
-        itemCount: _notifications.length,
-        itemBuilder: (context, index) {
-          return _buildNotificationCard(_notifications[index]);
-        },
+          ),
+          SizedBox(height: 8.h),
+          const Text(
+            'ستظهر هنا الإشعارات الجديدة',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildNotificationCard(Map<String, dynamic> notification) {
-    final dateFormat = DateFormat('yyyy/MM/dd', 'ar');
-    final timeFormat = DateFormat('HH:mm', 'ar');
-    final date = notification['created_at'] as DateTime;
-    final formattedDate = dateFormat.format(date);
-    final formattedTime = timeFormat.format(date);
-
+  Widget _buildNotificationCard(NotificationModel notification) {
+    // تحديد لون وأيقونة الإشعار حسب النوع
     IconData iconData;
     Color iconColor;
 
-    switch (notification['type']) {
+    switch (notification.type) {
       case 'appointment':
         iconData = Icons.calendar_today;
         iconColor = Colors.blue;
         break;
-      case 'reminder':
-        iconData = Icons.alarm;
-        iconColor = Colors.orange;
-        break;
       case 'medical_record':
         iconData = Icons.medical_information;
         iconColor = Colors.green;
+        break;
+      case 'doctor_rating':
+        iconData = Icons.star;
+        iconColor = Colors.amber;
         break;
       default:
         iconData = Icons.notifications;
@@ -159,91 +236,86 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return Card(
       margin: EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w),
-      elevation: notification['read'] ? 1 : 2,
+      elevation: notification.isRead ? 1 : 3,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        side: notification['read']
-            ? BorderSide.none
-            : BorderSide(color: AppTheme.primaryGreen, width: 1.w),
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: notification.isRead
+              ? Colors.transparent
+              : AppTheme.primaryGreen.withOpacity(0.5),
+          width: 1,
+        ),
       ),
+      color:
+          notification.isRead ? null : AppTheme.primaryGreen.withOpacity(0.05),
       child: InkWell(
-        onTap: () => _markAsRead(notification['id']),
-        borderRadius: BorderRadius.circular(12.r),
+        onTap: () => _markAsRead(notification),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: EdgeInsets.all(12.w),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // أيقونة الإشعار
               Container(
-                padding: EdgeInsets.all(8.w),
+                width: 40.w,
+                height: 40.w,
                 decoration: BoxDecoration(
                   color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8.r),
+                  shape: BoxShape.circle,
                 ),
                 child: Icon(
                   iconData,
                   color: iconColor,
-                  size: 24.sp,
+                  size: 20.w,
                 ),
               ),
               SizedBox(width: 12.w),
+
+              // محتوى الإشعار
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification['title'],
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: notification['read']
-                                  ? FontWeight.normal
-                                  : FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (!notification['read'])
-                          Container(
-                            width: 8.w,
-                            height: 8.w,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryGreen,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                      ],
+                    Text(
+                      notification.title,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: notification.isRead
+                            ? FontWeight.normal
+                            : FontWeight.bold,
+                      ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      notification['body'],
+                      notification.body,
                       style: TextStyle(
                         fontSize: 14.sp,
-                        color: Colors.grey[700],
+                        color: Colors.grey[600],
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 8.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          '$formattedDate - $formattedTime',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
+                    Text(
+                      _formatDate(notification.createdAt),
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey,
+                      ),
                     ),
                   ],
                 ),
               ),
+
+              // مؤشر الحالة
+              if (!notification.isRead)
+                Container(
+                  width: 10.w,
+                  height: 10.w,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.primaryGreen,
+                    shape: BoxShape.circle,
+                  ),
+                ),
             ],
           ),
         ),
@@ -251,43 +323,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  void _markAsRead(String notificationId) {
-    setState(() {
-      final index = _notifications.indexWhere((n) => n['id'] == notificationId);
-      if (index != -1) {
-        _notifications[index]['read'] = true;
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      if (difference.inHours == 0) {
+        if (difference.inMinutes == 0) {
+          return 'الآن';
+        }
+        return 'منذ ${difference.inMinutes} دقيقة';
       }
-    });
-
-    // TODO: Implement actual marking as read in backend
-  }
-
-  void _showClearAllDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('حذف جميع الإشعارات'),
-        content: const Text('هل أنت متأكد من حذف جميع الإشعارات؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _notifications.clear();
-              });
-              // TODO: Implement actual clearing in backend
-            },
-            child: const Text(
-              'حذف',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
+      return 'منذ ${difference.inHours} ساعة';
+    } else if (difference.inDays < 7) {
+      return 'منذ ${difference.inDays} يوم';
+    } else {
+      return '${date.year}/${date.month}/${date.day}';
+    }
   }
 }

@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as supabase_flutter;
-import 'dart:developer' as developer;
 import '../../../core/theme/app_theme.dart';
 import '../../../core/navigation/app_navigator.dart';
-import '../../../core/config/supabase_config.dart';
-import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../models/user_profile.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,10 +18,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   final _authService = AuthService();
 
+  List<UserProfile> _users = [];
+  UserProfile? _selectedUser;
   bool _isLoading = false;
   bool _obscurePassword = true;
-  List<User> _users = [];
-  User? _selectedUser;
 
   @override
   void initState() {
@@ -33,151 +30,24 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _loadUsers() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() => _isLoading = true);
     try {
       final users = await _authService.getAllUsers();
-
       if (mounted) {
         setState(() {
           _users = users;
           _isLoading = false;
         });
-
-        // Show a message if no users were found
-        if (users.isEmpty) {
-          // عرض رسالة مع خيار إنشاء مستخدم تجريبي
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('لا يوجد مستخدمين'),
-              content: const Text(
-                  'لم يتم العثور على أي مستخدمين في قاعدة البيانات. هل ترغب في إنشاء مستخدم تجريبي؟'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('إلغاء'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _createDemoUser();
-                  },
-                  child: const Text('إنشاء مستخدم تجريبي'),
-                ),
-              ],
-            ),
-          );
-        }
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('حدث خطأ في تحميل قائمة المستخدمين: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    }
-  }
-
-  /// إنشاء مستخدم تجريبي
-  Future<void> _createDemoUser() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final demoUser = await _authService.createDemoUser();
-
-      if (mounted) {
-        if (demoUser != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تم إنشاء مستخدم تجريبي بنجاح'),
-              backgroundColor: Colors.green,
-            ),
-          );
-
-          // تحديث قائمة المستخدمين
-          _loadUsers();
-        } else {
-          setState(() {
-            _isLoading = false;
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('فشل في إنشاء مستخدم تجريبي'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('حدث خطأ في إنشاء مستخدم تجريبي: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    }
-  }
-
-  /// إنشاء جداول المستخدمين
-  Future<void> _createTables() async {
-    setState(() => _isLoading = true);
-
-    try {
-      // إنشاء الجداول المطلوبة
-      final success = await _authService.createUserTables();
-
-      // إعادة تحميل المستخدمين
-      final users = await _authService.getAllUsers();
-
-      if (!mounted) return;
-
-      setState(() {
-        _users = users;
-        if (users.isNotEmpty) {
-          _selectedUser = users.first;
-        }
-      });
-
-      final message =
-          success ? 'تم إنشاء الجداول بنجاح' : 'تم محاولة إنشاء الجداول';
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: success ? AppTheme.primaryGreen : Colors.orange,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('فشل في إنشاء الجداول: ${e.toString()}'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-    } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ أثناء تحميل المستخدمين: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
       }
     }
   }
@@ -187,78 +57,24 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = true);
       try {
         final password = _formKey.currentState!.value['password'] as String;
-
         if (_selectedUser == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('الرجاء اختيار المستخدم'),
-              backgroundColor: AppTheme.errorColor,
-            ),
-          );
-          return;
+          throw Exception('يرجى اختيار مستخدم');
         }
 
-        // التحقق إذا كان المستخدم المحدد هو المستخدم التجريبي
-        if (_selectedUser!.id == 'demo-user-id' ||
-            _selectedUser!.email == 'demo.user@example.com') {
-          // تسجيل الدخول كمستخدم تجريبي بدون التحقق من كلمة المرور
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('تم تسجيل الدخول كمستخدم تجريبي'),
-                backgroundColor: Colors.green,
-              ),
-            );
-
-            // الانتقال إلى الشاشة الرئيسية كمريض
-            AppNavigator.navigateToHome(context, 'patient');
-          }
-          return;
-        }
-
-        // تسجيل الدخول للمستخدمين العاديين
-        final user = await _authService.login(
+        final result = await _authService.login(
           email: _selectedUser!.email,
           password: password,
         );
 
-        if (user != null) {
-          if (mounted) {
-            // تحديد نوع المستخدم والانتقال إلى الشاشة المناسبة
-            String userType = 'patient';
-            if (user['isAdmin'] == true) {
-              userType = 'admin';
-            } else if (user['isDoctor'] == true) {
-              userType = 'doctor';
-            }
-
-            AppNavigator.navigateToHome(context, userType);
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('كلمة المرور غير صحيحة'),
-                backgroundColor: AppTheme.errorColor,
-              ),
-            );
-          }
+        if (result != null && mounted) {
+          String role = result['role'];
+          AppNavigator.navigateToHome(context, role.toLowerCase());
         }
       } catch (e) {
         if (mounted) {
-          String errorMessage = 'حدث خطأ في تسجيل الدخول';
-          if (e.toString().contains('Invalid login credentials')) {
-            errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-          } else if (e.toString().contains('Email not confirmed')) {
-            errorMessage = 'يرجى تأكيد البريد الإلكتروني';
-          } else if (e.toString().contains('relation') &&
-              e.toString().contains('does not exist')) {
-            errorMessage = 'خطأ في قاعدة البيانات: الجدول غير موجود';
-          }
-
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(errorMessage),
+              content: Text('خطأ أثناء تسجيل الدخول: ${e.toString()}'),
               backgroundColor: AppTheme.errorColor,
             ),
           );
@@ -275,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_selectedUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('الرجاء اختيار المستخدم أولاً'),
+          content: Text('يرجى اختيار مستخدم أولاً'),
           backgroundColor: AppTheme.errorColor,
         ),
       );
@@ -297,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('حدث خطأ في إرسال رابط إعادة تعيين كلمة المرور'),
+            content: Text('حدث خطأ أثناء إرسال رابط إعادة التعيين'),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -305,103 +121,31 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Method to check database connection and tables
+  Future<void> _createDemoUser() async {
+    // تقدر تضيف هنا if needed عملية إنشاء مستخدم تجريبي من AuthService
+  }
+
+  Future<void> _createTables() async {
+    // تقدر تضيف هنا عملية إنشاء الجداول إذا ما كانت موجودة
+  }
+
   Future<void> _checkDatabaseConnection() async {
-    setState(() => _isLoading = true);
-
-    try {
-      // Check connection to Supabase
-      final supabaseClient = supabase_flutter.Supabase.instance.client;
-
-      // Try to query the users table
-      bool usersTableAvailable = false;
-      String usersTableError = '';
-      try {
-        // استخدام استعلام بسيط بدون دوال تجميع
-        await supabaseClient
-            .from(SupabaseConfig.usersTable)
-            .select('id')
-            .limit(1);
-        usersTableAvailable = true;
-      } catch (e) {
-        usersTableError = e.toString();
-      }
-
-      // محاولة الاستعلام عن المستخدم الحالي
-      bool isAuthenticated = false;
-      try {
-        final session = supabaseClient.auth.currentSession;
-        isAuthenticated = session != null;
-      } catch (e) {
-        developer.log('Error checking authentication: $e');
-      }
-
-      if (mounted) {
-        // Show the results
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('حالة الاتصال بقاعدة البيانات'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('الاتصال بـ Supabase: متصل'),
-                const SizedBox(height: 8),
-                Text(
-                    'حالة المصادقة: ${isAuthenticated ? 'مسجل الدخول' : 'غير مسجل الدخول'}'),
-                const SizedBox(height: 8),
-                Text(
-                    'جدول ${SupabaseConfig.usersTable}: ${usersTableAvailable ? 'متاح' : 'غير متاح'}'),
-                if (!usersTableAvailable && usersTableError.isNotEmpty)
-                  Text('خطأ: $usersTableError',
-                      style: const TextStyle(color: Colors.red)),
-                const SizedBox(height: 8),
-                const Text('جدول auth.users: يتطلب صلاحيات المدير'),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('إغلاق'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _loadUsers();
-                },
-                child: const Text('تحديث قائمة المستخدمين'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في الاتصال بقاعدة البيانات: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
+    // تقدر تضيف هنا عملية فحص الاتصال بقاعدة البيانات
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: const Text('تسجيل الدخول - منصة صحتي بلس'),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(24.w),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
                   'assets/images/Logo.png',
@@ -409,16 +153,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 120.w,
                   color: AppTheme.primaryGreen,
                   errorBuilder: (context, error, stackTrace) {
-                    return Icon(
-                      Icons.health_and_safety,
-                      size: 100.w,
-                      color: AppTheme.primaryGreen,
-                    );
+                    return Icon(Icons.health_and_safety,
+                        size: 100.w, color: AppTheme.primaryGreen);
                   },
                 ),
                 SizedBox(height: 24.h),
                 Text(
-                  ' صحتي بلس',
+                  'منصة صحتي بلس',
                   style: TextStyle(
                     fontSize: 24.sp,
                     fontWeight: FontWeight.bold,
@@ -435,6 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 48.h),
                 Card(
+                  elevation: 4,
                   child: Padding(
                     padding: EdgeInsets.all(24.w),
                     child: FormBuilder(
@@ -443,33 +185,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            'تسجيل دخول ',
+                            'معلومات الدخول',
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 20.sp,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.primaryGreen,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                           SizedBox(height: 24.h),
                           _isLoading
-                              ? const Center(
-                                  child: CircularProgressIndicator(),
-                                )
-                              : FormBuilderDropdown<User>(
+                              ? const Center(child: CircularProgressIndicator())
+                              : FormBuilderDropdown<UserProfile>(
                                   name: 'user',
                                   decoration: InputDecoration(
                                     labelText: 'اختر المستخدم',
                                     prefixIcon: const Icon(Icons.person),
-                                    // Show a hint if no users are available
-                                    hintText: _users.isEmpty
-                                        ? 'لا يوجد مستخدمين متاحين'
-                                        : null,
-                                    // Show a suffix icon to refresh the list
                                     suffixIcon: IconButton(
                                       icon: const Icon(Icons.refresh),
                                       onPressed: _loadUsers,
-                                      tooltip: 'تحديث قائمة المستخدمين',
                                     ),
                                   ),
                                   items: _users.map((user) {
@@ -478,18 +212,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                       child: Text(user.email),
                                     );
                                   }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedUser = value;
-                                    });
-                                  },
+                                  onChanged: (value) => _selectedUser = value,
                                   validator: FormBuilderValidators.required(
-                                    errorText: 'الرجاء اختيار المستخدم',
-                                  ),
+                                      errorText: 'يرجى اختيار مستخدم'),
                                 ),
                           SizedBox(height: 16.h),
                           FormBuilderTextField(
                             name: 'password',
+                            obscureText: _obscurePassword,
                             decoration: InputDecoration(
                               labelText: 'كلمة المرور',
                               prefixIcon: const Icon(Icons.lock),
@@ -506,10 +236,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 },
                               ),
                             ),
-                            obscureText: _obscurePassword,
                             validator: FormBuilderValidators.required(
-                              errorText: 'الرجاء إدخال كلمة المرور',
-                            ),
+                                errorText: 'يرجى إدخال كلمة المرور'),
                           ),
                           SizedBox(height: 8.h),
                           Align(
@@ -532,45 +260,24 @@ class _LoginScreenState extends State<LoginScreen> {
                               Navigator.pushNamed(context, '/register');
                             },
                             style: ElevatedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: 12.h),
                               backgroundColor: AppTheme.primaryGreen,
                             ),
                             child: const Text('إنشاء حساب جديد'),
                           ),
-                          // Debug button - only visible in development mode
-                          Visibility(
-                            visible: true, // Set to false in production
-                            child: Padding(
-                              padding: EdgeInsets.only(top: 16.h),
-                              child: Column(
-                                children: [
-                                  OutlinedButton(
-                                    onPressed: _checkDatabaseConnection,
-                                    child: const Text(
-                                        'فحص الاتصال بقاعدة البيانات'),
-                                  ),
-                                  SizedBox(height: 8.h),
-                                  OutlinedButton.icon(
-                                    onPressed: _createDemoUser,
-                                    icon: const Icon(Icons.person_add),
-                                    label: const Text('إنشاء مستخدم تجريبي'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.green,
-                                    ),
-                                  ),
-                                  SizedBox(height: 8.h),
-                                  OutlinedButton.icon(
-                                    onPressed:
-                                        _isLoading ? null : _createTables,
-                                    icon: const Icon(Icons.table_chart),
-                                    label: const Text('إنشاء الجداول'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.blue,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          SizedBox(height: 16.h),
+                          OutlinedButton(
+                            onPressed: _checkDatabaseConnection,
+                            child: const Text('فحص الاتصال بقاعدة البيانات'),
+                          ),
+                          SizedBox(height: 8.h),
+                          OutlinedButton(
+                            onPressed: _createDemoUser,
+                            child: const Text('إنشاء مستخدم تجريبي'),
+                          ),
+                          SizedBox(height: 8.h),
+                          OutlinedButton(
+                            onPressed: _createTables,
+                            child: const Text('إنشاء الجداول'),
                           ),
                         ],
                       ),
@@ -581,9 +288,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-      ),
-      appBar: AppBar(
-        title: const Text('تطبيق صحتي بلس'),
       ),
     );
   }

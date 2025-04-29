@@ -26,63 +26,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
       try {
         final formData = _formKey.currentState!.value;
 
-        if (formData['password'] != formData['confirmPassword']) {
-          throw Exception('كلمات المرور غير متطابقة');
-        }
-
-        // التحقق من قوة كلمة المرور
-        final password = formData['password'] as String;
-        final passwordError = _authService.validatePassword(password);
-        if (passwordError != null) {
-          throw Exception(passwordError);
-        }
-
-        // طباعة بيانات التسجيل للتصحيح
         final email = formData['email'] as String;
+        final password = formData['password'] as String;
+        final confirmPassword = formData['confirmPassword'] as String;
         final fullName = formData['fullName'] as String;
-        final phoneNumber = formData['phoneNumber'] as String? ?? '';
+        final phone = formData['phone'] as String;
+        final gender = formData['gender'] as String?;
+        final birthDate = formData['birthDate'] as DateTime?;
+        final nationalId = formData['nationalId'] as String?;
 
-        debugPrint('Registration data:');
-        debugPrint('Email: $email');
-        debugPrint('Full Name: $fullName');
-        debugPrint('Phone Number: $phoneNumber');
+        if (password != confirmPassword) {
+          throw Exception('كلمتا المرور غير متطابقتين');
+        }
 
-        // إنشاء الحساب وحفظ البيانات
         await _authService.register(
           email: email,
           password: password,
           fullName: fullName,
-          phoneNumber: phoneNumber,
+          phone: phone,
+          gender: gender,
+          birthDate: birthDate,
+          nationalId: nationalId,
         );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                  'تم إنشاء الحساب بنجاح! يرجى تفعيل حسابك من خلال البريد الإلكتروني'),
+              content: Text('تم إنشاء الحساب بنجاح!'),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 5),
             ),
           );
-          // العودة إلى شاشة تسجيل الدخول
           Navigator.pushReplacementNamed(context, '/login');
         }
       } catch (e) {
         if (mounted) {
-          // تنسيق رسالة الخطأ
-          String errorMessage = e.toString();
-          if (errorMessage.contains('Exception: ')) {
-            errorMessage = errorMessage.replaceAll('Exception: ', '');
-          }
-
-          // طباعة الخطأ الكامل للتصحيح
-          debugPrint('Registration error: $e');
-
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(errorMessage),
+              content: Text('خطأ أثناء إنشاء الحساب: ${e.toString()}'),
               backgroundColor: AppTheme.errorColor,
-              duration: const Duration(seconds: 5),
             ),
           );
         }
@@ -105,163 +86,103 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(24.w),
-          child: Column(
-            children: [
-              // أيقونة وشعار التطبيق
-              Icon(
-                Icons.health_and_safety,
-                size: 100.w,
-                color: AppTheme.primaryGreen,
-              ),
-              SizedBox(height: 24.h),
-              Text(
-                'منصة صحتي بلس',
-                style: TextStyle(
-                  fontSize: 24.sp,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryGreen,
+          child: FormBuilder(
+            key: _formKey,
+            child: Column(
+              children: [
+                FormBuilderTextField(
+                  name: 'fullName',
+                  decoration: const InputDecoration(labelText: 'الاسم الكامل'),
+                  validator: FormBuilderValidators.required(),
                 ),
-              ),
-              SizedBox(height: 32.h),
-              // نموذج التسجيل
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                SizedBox(height: 16.h),
+                FormBuilderTextField(
+                  name: 'email',
+                  decoration:
+                      const InputDecoration(labelText: 'البريد الإلكتروني'),
+                  validator: FormBuilderValidators.compose([
+                    FormBuilderValidators.required(),
+                    FormBuilderValidators.email(),
+                  ]),
                 ),
-                child: Padding(
-                  padding: EdgeInsets.all(24.w),
-                  child: FormBuilder(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        FormBuilderTextField(
-                          name: 'fullName',
-                          decoration: const InputDecoration(
-                            labelText: 'الاسم الكامل',
-                            prefixIcon: Icon(Icons.person),
-                          ),
-                          validator: FormBuilderValidators.required(
-                            errorText: 'الرجاء إدخال الاسم الكامل',
-                          ),
-                        ),
-                        SizedBox(height: 16.h),
-                        FormBuilderTextField(
-                          name: 'email',
-                          decoration: const InputDecoration(
-                            labelText: 'البريد الإلكتروني',
-                            prefixIcon: Icon(Icons.email),
-                          ),
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.required(
-                              errorText: 'الرجاء إدخال البريد الإلكتروني',
-                            ),
-                            FormBuilderValidators.email(
-                              errorText: 'الرجاء إدخال بريد إلكتروني صحيح',
-                            ),
-                          ]),
-                        ),
-                        SizedBox(height: 16.h),
-                        FormBuilderTextField(
-                          name: 'phoneNumber',
-                          decoration: const InputDecoration(
-                            labelText: 'رقم الهاتف',
-                            prefixIcon: Icon(Icons.phone),
-                          ),
-                          keyboardType: TextInputType.phone,
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.required(
-                              errorText: 'الرجاء إدخال رقم الهاتف',
-                            ),
-                            FormBuilderValidators.minLength(
-                              10,
-                              errorText:
-                                  'رقم الهاتف يجب أن يكون 10 أرقام على الأقل',
-                            ),
-                          ]),
-                        ),
-                        SizedBox(height: 16.h),
-                        FormBuilderTextField(
-                          name: 'password',
-                          decoration: InputDecoration(
-                            labelText: 'كلمة المرور',
-                            prefixIcon: const Icon(Icons.lock),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                            helperText:
-                                'مثال: Admin@2024\nيجب أن تحتوي كلمة المرور على:\n• 8 أحرف على الأقل\n• حرف كبير\n• حرف صغير\n• رقم\n• رمز خاص مثل @\$!%*?&',
-                            helperMaxLines: 6,
-                          ),
-                          obscureText: _obscurePassword,
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.required(
-                              errorText: 'الرجاء إدخال كلمة المرور',
-                            ),
-                            FormBuilderValidators.minLength(
-                              6,
-                              errorText:
-                                  'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
-                            ),
-                          ]),
-                        ),
-                        SizedBox(height: 16.h),
-                        FormBuilderTextField(
-                          name: 'confirmPassword',
-                          decoration: InputDecoration(
-                            labelText: 'تأكيد كلمة المرور',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscureConfirmPassword =
-                                      !_obscureConfirmPassword;
-                                });
-                              },
-                            ),
-                          ),
-                          obscureText: _obscureConfirmPassword,
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.required(
-                              errorText: 'الرجاء تأكيد كلمة المرور',
-                            ),
-                          ]),
-                        ),
-                        SizedBox(height: 24.h),
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _handleRegister,
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 12.h),
-                            backgroundColor: AppTheme.primaryGreen,
-                          ),
-                          child: _isLoading
-                              ? const CircularProgressIndicator()
-                              : Text(
-                                  'إنشاء حساب',
-                                  style: TextStyle(fontSize: 16.sp),
-                                ),
-                        ),
-                      ],
+                SizedBox(height: 16.h),
+                FormBuilderTextField(
+                  name: 'phone',
+                  decoration: const InputDecoration(labelText: 'رقم الهاتف'),
+                  validator: FormBuilderValidators.required(),
+                ),
+                SizedBox(height: 16.h),
+                FormBuilderDropdown<String>(
+                  name: 'gender',
+                  decoration: const InputDecoration(labelText: 'الجنس'),
+                  items: const [
+                    DropdownMenuItem(value: 'ذكر', child: Text('ذكر')),
+                    DropdownMenuItem(value: 'أنثى', child: Text('أنثى')),
+                  ],
+                ),
+                SizedBox(height: 16.h),
+                FormBuilderDateTimePicker(
+                  name: 'birthDate',
+                  decoration: const InputDecoration(labelText: 'تاريخ الميلاد'),
+                  inputType: InputType.date,
+                ),
+                SizedBox(height: 16.h),
+                FormBuilderTextField(
+                  name: 'nationalId',
+                  decoration:
+                      const InputDecoration(labelText: 'رقم الهوية الوطنية'),
+                ),
+                SizedBox(height: 16.h),
+                FormBuilderTextField(
+                  name: 'password',
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    labelText: 'كلمة المرور',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
                     ),
                   ),
+                  validator: FormBuilderValidators.minLength(6),
                 ),
-              ),
-            ],
+                SizedBox(height: 16.h),
+                FormBuilderTextField(
+                  name: 'confirmPassword',
+                  obscureText: _obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    labelText: 'تأكيد كلمة المرور',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
+                  ),
+                  validator: FormBuilderValidators.required(),
+                ),
+                SizedBox(height: 24.h),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _handleRegister,
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : const Text('إنشاء حساب'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

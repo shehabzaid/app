@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:intl/intl.dart';
+import 'dart:developer' as developer;
 import '../../../core/theme/app_theme.dart';
 import '../models/appointment.dart';
 import '../services/appointment_service.dart';
@@ -10,6 +11,7 @@ import '../../../features/auth/services/auth_service.dart';
 import '../../../features/hospitals/services/hospital_service.dart';
 import '../../../features/hospitals/models/hospital.dart';
 import '../../../features/hospitals/models/doctor.dart';
+import '../../../features/notifications/utils/notification_helper.dart';
 
 class BookAppointmentScreen extends StatefulWidget {
   final String? hospitalId;
@@ -32,6 +34,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   final AppointmentService _appointmentService = AppointmentService();
   final AuthService _authService = AuthService();
   final HospitalService _hospitalService = HospitalService();
+  final NotificationHelper _notificationHelper = NotificationHelper();
 
   bool _isLoading = false;
   bool _isInitializing = true;
@@ -439,7 +442,32 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           createdAt: DateTime.now(),
         );
 
-        await _appointmentService.bookAppointment(appointment);
+        // حجز الموعد
+        final createdAppointment =
+            await _appointmentService.bookAppointment(appointment);
+
+        // إرسال إشعار للطبيب
+        final currentUser = await _authService.getCurrentUserProfile();
+        if (currentUser != null && createdAppointment != null) {
+          // تنسيق التاريخ والوقت
+          final appointmentDateTime = DateTime(
+            appointmentDate.year,
+            appointmentDate.month,
+            appointmentDate.day,
+            appointmentTime.hour,
+            appointmentTime.minute,
+          );
+
+          // إرسال إشعار للطبيب
+          await _notificationHelper.sendNewAppointmentNotificationToDoctor(
+            doctorId: doctor.id,
+            patientName: currentUser.fullName ?? currentUser.email,
+            appointmentDateTime: appointmentDateTime,
+            appointmentId: createdAppointment.id,
+          );
+
+          developer.log('تم إرسال إشعار للطبيب بنجاح');
+        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

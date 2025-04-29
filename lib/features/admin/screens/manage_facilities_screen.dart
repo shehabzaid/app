@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/navigation/app_navigator.dart';
 import '../../hospitals/models/hospital.dart';
 import '../../hospitals/services/hospital_service.dart';
 
@@ -177,13 +178,11 @@ class _ManageFacilitiesScreenState extends State<ManageFacilitiesScreen> {
   }
 
   void _navigateToManageDepartments(Hospital hospital) {
-    // TODO: Navigate to manage departments screen
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => ManageDepartmentsScreen(hospital: hospital),
-    //   ),
-    // );
+    AppNavigator.navigateToManageDepartments(context, hospital: hospital);
+  }
+
+  void _navigateToDoctors(Hospital hospital) {
+    AppNavigator.navigateToManageDoctors(context, hospital: hospital);
   }
 
   @override
@@ -526,6 +525,12 @@ class _ManageFacilitiesScreenState extends State<ManageFacilitiesScreen> {
                   label: 'الأقسام',
                   color: Colors.green,
                   onPressed: () => _navigateToManageDepartments(hospital),
+                ),
+                _buildActionButton(
+                  icon: Icons.medical_services,
+                  label: 'الأطباء',
+                  color: Colors.purple,
+                  onPressed: () => _navigateToDoctors(hospital),
                 ),
               ],
             ),

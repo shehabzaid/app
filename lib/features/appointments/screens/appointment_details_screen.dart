@@ -25,7 +25,7 @@ class AppointmentDetailsScreen extends StatefulWidget {
 class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   final AppointmentService _appointmentService = AppointmentService();
   final HospitalService _hospitalService = HospitalService();
-  
+
   bool _isLoading = true;
   Appointment? _appointment;
   Hospital? _hospital;
@@ -288,7 +288,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                 'موعد افتراضي (عن بعد)',
               ),
             ],
-            if (_appointment!.notes != null && _appointment!.notes!.isNotEmpty) ...[
+            if (_appointment!.notes != null &&
+                _appointment!.notes!.isNotEmpty) ...[
               SizedBox(height: 12.h),
               _buildDetailRow(
                 Icons.note,
@@ -411,7 +412,29 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: () {
-          // TODO: Navigate to rate doctor screen
+          // التنقل إلى شاشة تقييم الطبيب
+          if (_doctor != null) {
+            AppNavigator.navigateToRateDoctor(
+              context,
+              doctorId: _doctor!.id,
+              doctorName: _doctor!.nameArabic,
+              hospitalName: _hospital?.nameArabic ?? '',
+              appointmentId: widget.appointmentId,
+            );
+
+            // إضافة مستمع للتنقل للتحقق من العودة من شاشة التقييم
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              // إعادة تحميل البيانات بعد العودة من شاشة التقييم
+              _loadAppointmentDetails();
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('لا يمكن تقييم الطبيب: بيانات الطبيب غير متوفرة'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         },
         icon: const Icon(Icons.star, color: Colors.white),
         label: const Text('تقييم الطبيب'),
@@ -441,7 +464,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await _appointmentService.cancelAppointment(widget.appointmentId);
+                await _appointmentService
+                    .cancelAppointment(widget.appointmentId);
                 await _loadAppointmentDetails();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(

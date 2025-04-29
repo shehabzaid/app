@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/navigation/app_navigator.dart';
 import '../../hospitals/models/doctor.dart';
 import '../../hospitals/models/hospital.dart';
 import '../../hospitals/services/hospital_service.dart';
@@ -20,13 +21,13 @@ class ManageDoctorsScreen extends StatefulWidget {
 class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
   final _hospitalService = HospitalService();
   final _searchController = TextEditingController();
-  
+
   bool _isLoading = true;
   String _error = '';
   List<Doctor> _doctors = [];
   List<Doctor> _filteredDoctors = [];
   List<Hospital> _hospitals = [];
-  
+
   Hospital? _selectedHospital;
   String? _selectedSpecialization;
   List<String> _specializations = [];
@@ -52,25 +53,26 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
 
     try {
       List<Doctor> doctors;
-      
+
       if (_selectedHospital != null) {
         // تحميل الأطباء لمستشفى محدد
-        doctors = await _hospitalService.getDoctorsByHospital(_selectedHospital!.id);
+        doctors =
+            await _hospitalService.getDoctorsByHospital(_selectedHospital!.id);
       } else {
         // تحميل جميع الأطباء
         doctors = await _hospitalService.getAllDoctors();
-        
+
         // تحميل قائمة المستشفيات للفلترة
         final hospitals = await _hospitalService.getAllHospitals();
         setState(() => _hospitals = hospitals);
       }
-      
+
       // استخراج التخصصات الفريدة
       final specializations = <String>{};
       for (final doctor in doctors) {
         specializations.add(doctor.specializationArabic);
       }
-      
+
       setState(() {
         _doctors = doctors;
         _filteredDoctors = doctors;
@@ -87,7 +89,7 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
 
   void _filterDoctors() {
     final searchText = _searchController.text.toLowerCase();
-    
+
     setState(() {
       _filteredDoctors = _doctors.where((doctor) {
         // تطبيق فلتر البحث
@@ -95,12 +97,13 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
             doctor.nameArabic.toLowerCase().contains(searchText) ||
             (doctor.nameEnglish?.toLowerCase().contains(searchText) ?? false) ||
             doctor.specializationArabic.toLowerCase().contains(searchText) ||
-            (doctor.specializationEnglish?.toLowerCase().contains(searchText) ?? false);
-        
+            (doctor.specializationEnglish?.toLowerCase().contains(searchText) ??
+                false);
+
         // تطبيق فلتر التخصص
-        final matchesSpecialization = _selectedSpecialization == null || 
+        final matchesSpecialization = _selectedSpecialization == null ||
             doctor.specializationArabic == _selectedSpecialization;
-        
+
         return matchesSearch && matchesSpecialization;
       }).toList();
     });
@@ -126,6 +129,10 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
     //     _loadData();
     //   }
     // });
+  }
+
+  void _navigateToLinkDoctorUser() {
+    AppNavigator.navigateToLinkDoctorUser(context);
   }
 
   void _navigateToEditDoctor(Doctor doctor) {
@@ -163,14 +170,15 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
         ],
       ),
     );
-    
+
     if (confirmed == true) {
       setState(() => _isLoading = true);
-      
+
       try {
         // TODO: Implement actual API call to delete doctor
-        await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
-        
+        await Future.delayed(
+            const Duration(seconds: 1)); // Simulate network delay
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('تم حذف ${doctor.nameArabic} بنجاح')),
@@ -191,11 +199,11 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
   void _toggleDoctorStatus(Doctor doctor) {
     // TODO: Implement toggle doctor status
     // setState(() => _isLoading = true);
-    // 
+    //
     // try {
     //   // TODO: Implement actual API call to toggle doctor status
     //   await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
-    //   
+    //
     //   if (mounted) {
     //     ScaffoldMessenger.of(context).showSnackBar(
     //       SnackBar(content: Text('تم تغيير حالة ${doctor.nameArabic} بنجاح')),
@@ -251,7 +259,7 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
                     onChanged: (_) => _filterDoctors(),
                   ),
                   SizedBox(height: 16.h),
-                  
+
                   // فلاتر إضافية
                   Row(
                     children: [
@@ -275,10 +283,11 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
                                 value: null,
                                 child: Text('جميع المستشفيات'),
                               ),
-                              ..._hospitals.map((hospital) => DropdownMenuItem<Hospital>(
-                                value: hospital,
-                                child: Text(hospital.nameArabic),
-                              )),
+                              ..._hospitals
+                                  .map((hospital) => DropdownMenuItem<Hospital>(
+                                        value: hospital,
+                                        child: Text(hospital.nameArabic),
+                                      )),
                             ],
                             onChanged: (value) {
                               setState(() => _selectedHospital = value);
@@ -288,7 +297,7 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
                         ),
                         SizedBox(width: 16.w),
                       ],
-                      
+
                       // فلتر التخصص
                       Expanded(
                         child: DropdownButtonFormField<String>(
@@ -308,10 +317,11 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
                               value: null,
                               child: Text('جميع التخصصات'),
                             ),
-                            ..._specializations.map((specialization) => DropdownMenuItem<String>(
-                              value: specialization,
-                              child: Text(specialization),
-                            )),
+                            ..._specializations.map(
+                                (specialization) => DropdownMenuItem<String>(
+                                      value: specialization,
+                                      child: Text(specialization),
+                                    )),
                           ],
                           onChanged: (value) {
                             setState(() => _selectedSpecialization = value);
@@ -322,7 +332,7 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
                     ],
                   ),
                   SizedBox(height: 16.h),
-                  
+
                   // أزرار إعادة الضبط والإضافة
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -332,21 +342,42 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
                         icon: const Icon(Icons.refresh),
                         label: const Text('إعادة ضبط الفلاتر'),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: _navigateToAddDoctor,
-                        icon: const Icon(Icons.add),
-                        label: const Text('إضافة طبيب'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryGreen,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16.w,
-                            vertical: 8.h,
+                      Row(
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: _navigateToLinkDoctorUser,
+                            icon: const Icon(Icons.link),
+                            label: const Text('ربط بمستخدم'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16.w,
+                                vertical: 8.h,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                          SizedBox(width: 8.w),
+                          ElevatedButton.icon(
+                            onPressed: _navigateToAddDoctor,
+                            icon: const Icon(Icons.add),
+                            label: const Text('إضافة طبيب'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryGreen,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16.w,
+                                vertical: 8.h,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -354,7 +385,7 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
               ),
             ),
           ),
-          
+
           // عدد النتائج
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -370,7 +401,7 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
               ],
             ),
           ),
-          
+
           // قائمة الأطباء
           Expanded(
             child: _isLoading
@@ -465,7 +496,7 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
                       : null,
                 ),
                 SizedBox(width: 16.w),
-                
+
                 // معلومات الطبيب
                 Expanded(
                   child: Column(
@@ -520,7 +551,7 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
                     ],
                   ),
                 ),
-                
+
                 // حالة الطبيب (نشط/غير نشط)
                 Switch(
                   value: doctor.isActive,
@@ -530,7 +561,7 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
               ],
             ),
             SizedBox(height: 16.h),
-            
+
             // أزرار الإجراءات
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -548,7 +579,8 @@ class _ManageDoctorsScreenState extends State<ManageDoctorsScreen> {
                   onPressed: () => _deleteDoctor(doctor),
                 ),
                 _buildActionButton(
-                  icon: doctor.isActive ? Icons.visibility_off : Icons.visibility,
+                  icon:
+                      doctor.isActive ? Icons.visibility_off : Icons.visibility,
                   label: doctor.isActive ? 'إخفاء' : 'إظهار',
                   color: doctor.isActive ? Colors.orange : Colors.green,
                   onPressed: () => _toggleDoctorStatus(doctor),

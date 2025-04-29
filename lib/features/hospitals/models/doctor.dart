@@ -16,6 +16,7 @@ class Doctor {
   final String? phone;
   final String? email;
   final String? profilePhotoUrl;
+  final String? userId; // ID del usuario asociado para inicio de sesión
 
   // Para mantener compatibilidad con el código existente
   String? get imageUrl => profilePhotoUrl;
@@ -34,6 +35,7 @@ class Doctor {
     this.phone,
     this.email,
     this.profilePhotoUrl,
+    this.userId,
     required this.isActive,
     required this.createdAt,
   });
@@ -51,6 +53,7 @@ class Doctor {
       phone: json['phone']?.toString(),
       email: json['email']?.toString(),
       profilePhotoUrl: json['profile_photo_url']?.toString(),
+      userId: json['user_id']?.toString(),
       isActive: json['is_active'] as bool? ?? true,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'].toString())
@@ -71,6 +74,7 @@ class Doctor {
       'phone': phone,
       'email': email,
       'profile_photo_url': profilePhotoUrl,
+      'user_id': userId,
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
     };
@@ -88,6 +92,7 @@ class Doctor {
     String? phone,
     String? email,
     String? profilePhotoUrl,
+    String? userId,
     bool? isActive,
     DateTime? createdAt,
   }) {
@@ -104,6 +109,7 @@ class Doctor {
       phone: phone ?? this.phone,
       email: email ?? this.email,
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
+      userId: userId ?? this.userId,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -125,6 +131,7 @@ class Doctor {
           phone == other.phone &&
           email == other.email &&
           profilePhotoUrl == other.profilePhotoUrl &&
+          userId == other.userId &&
           isActive == other.isActive &&
           createdAt == other.createdAt;
 
@@ -141,6 +148,7 @@ class Doctor {
       phone.hashCode ^
       email.hashCode ^
       profilePhotoUrl.hashCode ^
+      userId.hashCode ^
       isActive.hashCode ^
       createdAt.hashCode;
 }

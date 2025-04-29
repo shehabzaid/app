@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'dart:developer' as developer;
 import '../models/hospital.dart';
 import '../models/department.dart';
+import '../models/doctor.dart';
 import '../services/hospital_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -23,6 +25,7 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
   String _error = '';
   Hospital? _hospital;
   List<Department> _departments = [];
+  List<Doctor> _doctors = [];
 
   @override
   void initState() {
@@ -34,17 +37,30 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
     try {
       setState(() => _isLoading = true);
 
+      developer.log('Loading hospital details for ID: ${widget.hospitalId}');
+
       final hospital =
           await _hospitalService.getHospitalDetails(widget.hospitalId);
+      developer.log('Hospital details loaded: ${hospital.nameArabic}');
+
       final departments =
           await _hospitalService.getHospitalDepartments(widget.hospitalId);
+      developer.log('Departments loaded: ${departments.length}');
+
+      // Load doctors directly from the hospital
+      final doctors =
+          await _hospitalService.getDoctorsByHospital(widget.hospitalId);
+      developer.log('Doctors loaded directly: ${doctors.length}');
 
       setState(() {
         _hospital = hospital;
         _departments = departments;
+        _doctors = doctors;
         _error = '';
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      developer.log('Error loading hospital details: $e');
+      developer.log('Stack trace: $stackTrace');
       setState(() => _error = e.toString());
     } finally {
       setState(() => _isLoading = false);
@@ -53,28 +69,28 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
 
   Future<void> _openMap() async {
     if (_hospital?.locationLat != null && _hospital?.locationLong != null) {
-      final url =
-          'https://www.google.com/maps/search/?api=1&query=${_hospital!.locationLat},${_hospital!.locationLong}';
-      if (await canLaunch(url)) {
-        await launch(url);
+      final url = Uri.parse(
+          'https://www.google.com/maps/search/?api=1&query=${_hospital!.locationLat},${_hospital!.locationLong}');
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
       }
     }
   }
 
   Future<void> _makePhoneCall() async {
     if (_hospital?.phone != null) {
-      final url = 'tel:${_hospital!.phone}';
-      if (await canLaunch(url)) {
-        await launch(url);
+      final url = Uri.parse('tel:${_hospital!.phone}');
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
       }
     }
   }
 
   Future<void> _sendEmail() async {
     if (_hospital?.email != null) {
-      final url = 'mailto:${_hospital!.email}';
-      if (await canLaunch(url)) {
-        await launch(url);
+      final url = Uri.parse('mailto:${_hospital!.email}');
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
       }
     }
   }
@@ -249,6 +265,106 @@ class _HospitalDetailsScreenState extends State<HospitalDetailsScreen> {
                                     },
                                   );
                                 },
+                              ),
+                            );
+                          },
+                        ),
+
+                      // الأطباء
+                      SizedBox(height: 24.h),
+                      Text(
+                        'الأطباء',
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+                      if (_doctors.isEmpty)
+                        const Center(
+                          child: Text('لا يوجد أطباء متاحين حالياً'),
+                        )
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _doctors.length,
+                          itemBuilder: (context, index) {
+                            final doctor = _doctors[index];
+                            return Card(
+                              margin: EdgeInsets.only(bottom: 16.h),
+                              child: Padding(
+                                padding: EdgeInsets.all(16.w),
+                                child: Row(
+                                  children: [
+                                    // صورة الطبيب
+                                    if (doctor.imageUrl != null)
+                                      Container(
+                                        width: 80.w,
+                                        height: 80.w,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          image: DecorationImage(
+                                            image:
+                                                NetworkImage(doctor.imageUrl!),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      Container(
+                                        width: 80.w,
+                                        height: 80.w,
+                                        decoration: const BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.grey,
+                                        ),
+                                        child: Icon(
+                                          Icons.person,
+                                          size: 40.w,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    SizedBox(width: 16.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            doctor.nameArabic,
+                                            style: TextStyle(
+                                              fontSize: 18.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 4.h),
+                                          Text(
+                                            doctor.specializationArabic,
+                                            style: TextStyle(
+                                              fontSize: 14.sp,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.arrow_forward_ios),
+                                      onPressed: () {
+                                        // التنقل إلى صفحة تفاصيل الطبيب
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/doctor-details',
+                                          arguments: {
+                                            'doctorId': doctor.id,
+                                            'hospitalId': widget.hospitalId,
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },

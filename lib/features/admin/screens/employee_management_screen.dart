@@ -402,12 +402,6 @@ class _EmployeeManagementScreenState extends State<EmployeeManagementScreen> {
       // استخدام رقم الهاتف كلمة مرور افتراضية
       final password = employee.mobile ?? employee.employeeNumber;
 
-      await _authService.createEmployeeAccount(
-        employee.email!,
-        password,
-        employee.id,
-      );
-
       // إغلاق مؤشر التحميل
       if (mounted) {
         Navigator.of(context).pop();

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/hospitals/models/hospital.dart';
+import '../../features/advertisements/models/advertisement.dart';
 
 /// Clase para manejar la navegación en la aplicación
 /// Implementa los flujos de usuario para pacientes, médicos y administradores
@@ -74,13 +76,13 @@ class AppNavigator {
         Navigator.pushReplacementNamed(context, '/admin-dashboard');
         break;
       case 1: // Instalaciones
-        Navigator.pushNamed(context, '/admin/manage-facilities');
+        navigateToManageFacilities(context);
         break;
       case 2: // Usuarios
-        Navigator.pushNamed(context, '/admin/manage-doctors');
+        navigateToManageUsers(context);
         break;
       case 3: // Configuración
-        // TODO: Implementar pantalla de configuración para administradores
+        navigateToManageNotifications(context);
         break;
     }
   }
@@ -135,17 +137,22 @@ class AppNavigator {
     );
   }
 
-  /// Navega a la pantalla de calificación del médico
-  static void navigateToRateDoctor(BuildContext context, String appointmentId,
-      String doctorName, String hospitalName, String appointmentDate) {
+  /// التنقل إلى شاشة تقييم الطبيب
+  static void navigateToRateDoctor(
+    BuildContext context, {
+    required String doctorId,
+    required String doctorName,
+    String hospitalName = '',
+    String? appointmentId,
+  }) {
     Navigator.pushNamed(
       context,
       '/rate-doctor',
       arguments: {
-        'appointmentId': appointmentId,
+        'doctorId': doctorId,
         'doctorName': doctorName,
         'hospitalName': hospitalName,
-        'appointmentDate': appointmentDate,
+        'appointmentId': appointmentId,
       },
     );
   }
@@ -163,12 +170,22 @@ class AppNavigator {
     );
   }
 
-  /// Navega a la pantalla de detalles de la cita
+  /// Navega a la pantalla de detalles de la cita (para pacientes)
   static void navigateToAppointmentDetails(
       BuildContext context, String appointmentId) {
     Navigator.pushNamed(
       context,
       '/appointment-details',
+      arguments: appointmentId,
+    );
+  }
+
+  /// Navega a la pantalla de detalles de la cita (para médicos)
+  static void navigateToDoctorAppointmentDetails(
+      BuildContext context, String appointmentId) {
+    Navigator.pushNamed(
+      context,
+      '/doctor/appointment-details',
       arguments: appointmentId,
     );
   }
@@ -210,10 +227,27 @@ class AppNavigator {
   /// Navega a la pantalla de registros médicos
   static void navigateToMedicalRecords(BuildContext context,
       {String? patientId}) {
+    // الحصول على معرف المستخدم الحالي إذا لم يتم تمرير معرف
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    final userId = patientId ?? currentUser?.id ?? '';
+
+    if (userId.isEmpty) {
+      // إذا لم يكن هناك مستخدم مسجل، توجيه المستخدم إلى صفحة تسجيل الدخول
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى تسجيل الدخول أولاً لعرض السجلات الطبية'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      return;
+    }
+
+    // التنقل إلى صفحة السجلات الطبية مع تمرير معرف المستخدم
     Navigator.pushNamed(
       context,
       '/medical-records',
-      arguments: patientId,
+      arguments: userId,
     );
   }
 
@@ -232,9 +266,94 @@ class AppNavigator {
     Navigator.pushNamed(context, '/settings');
   }
 
+  /// التنقل إلى شاشة إدارة الإعلانات
+  static void navigateToAdvertisements(BuildContext context) {
+    Navigator.pushNamed(context, '/admin/advertisements');
+  }
+
+  /// التنقل إلى شاشة إضافة/تعديل إعلان
+  static void navigateToAddEditAdvertisement(BuildContext context,
+      {Advertisement? advertisement}) {
+    Navigator.pushNamed(
+      context,
+      '/admin/advertisements/edit',
+      arguments: advertisement,
+    );
+  }
+
+  /// التنقل إلى شاشة ربط الأطباء بالمستخدمين
+  static void navigateToLinkDoctorUser(BuildContext context) {
+    Navigator.pushNamed(context, '/admin/link-doctor-user');
+  }
+
+  /// التنقل إلى شاشة إدارة المستخدمين
+  static void navigateToManageUsers(BuildContext context) {
+    Navigator.pushNamed(context, '/admin/manage-users');
+  }
+
+  /// التنقل إلى شاشة إدارة الأقسام
+  static void navigateToManageDepartments(BuildContext context,
+      {Hospital? hospital}) {
+    Navigator.pushNamed(
+      context,
+      '/admin/manage-departments',
+      arguments: hospital,
+    );
+  }
+
+  /// التنقل إلى شاشة إدارة الأطباء
+  static void navigateToManageDoctors(BuildContext context,
+      {Hospital? hospital}) {
+    Navigator.pushNamed(
+      context,
+      '/admin/manage-doctors',
+      arguments: hospital,
+    );
+  }
+
+  /// التنقل إلى شاشة إدارة المواعيد
+  static void navigateToManageAppointments(BuildContext context) {
+    Navigator.pushNamed(context, '/admin/manage-appointments');
+  }
+
+  /// التنقل إلى شاشة إدارة الإشعارات
+  static void navigateToManageNotifications(BuildContext context) {
+    Navigator.pushNamed(context, '/admin/manage-notifications');
+  }
+
+  /// التنقل إلى شاشة إدارة المنشآت الصحية
+  static void navigateToManageFacilities(BuildContext context) {
+    Navigator.pushNamed(context, '/admin/manage-facilities');
+  }
+
   /// Cierra sesión y navega a la pantalla de inicio de sesión
-  static void logout(BuildContext context) {
-    // TODO: Implementar lógica de cierre de sesión
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  static Future<void> logout(BuildContext context) async {
+    try {
+      // تنفيذ تسجيل الخروج
+      await Supabase.instance.client.auth.signOut();
+
+      // عرض رسالة نجاح
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تسجيل الخروج بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // التنقل إلى صفحة تسجيل الدخول
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      }
+    } catch (e) {
+      // عرض رسالة خطأ
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ أثناء تسجيل الخروج: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

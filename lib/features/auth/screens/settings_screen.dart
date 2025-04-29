@@ -16,7 +16,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   final AuthService _authService = AuthService();
-  
+
   bool _isLoading = true;
   bool _isSaving = false;
   UserProfile? _userProfile;
@@ -321,20 +321,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       try {
         final formData = _formKey.currentState!.value;
-        
+
         final updatedProfile = _userProfile!.copyWith(
           fullName: formData['full_name'],
           phone: formData['phone'],
           gender: formData['gender'],
           nationalId: formData['national_id'],
         );
-        
-        await _authService.updateUserProfile(updatedProfile);
-        
+
+        // await _authService.updateUserProfile(updatedProfile);
+
         setState(() {
           _userProfile = updatedProfile;
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'dart:developer' as developer;
 import '../../../core/theme/app_theme.dart';
+import '../../../core/navigation/app_navigator.dart';
 import '../../hospitals/models/doctor.dart';
 import '../../hospitals/services/hospital_service.dart';
-import '../../hospitals/screens/book_appointment_screen.dart';
+import '../../reviews/models/review.dart';
+import '../../reviews/services/review_service.dart';
+import '../../auth/services/auth_service.dart';
 
 class DoctorDetailsScreen extends StatefulWidget {
   final String doctorId;
@@ -21,10 +25,14 @@ class DoctorDetailsScreen extends StatefulWidget {
 
 class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
   final _hospitalService = HospitalService();
+  final _reviewService = ReviewService();
+  final _authService = AuthService();
+
   bool _isLoading = true;
   String _error = '';
   Doctor? _doctor;
-  List<Map<String, dynamic>> _reviews = [];
+  List<Review> _reviews = [];
+  Map<String, String> _patientNames = {}; // لتخزين أسماء المرضى
   double _averageRating = 0.0;
 
   @override
@@ -37,50 +45,45 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
     try {
       setState(() => _isLoading = true);
 
-      // Load doctor details
+      // جلب تفاصيل الطبيب
       final doctor = await _hospitalService.getDoctorDetails(widget.doctorId);
-      
-      // TODO: Load doctor reviews from API
-      // Mock data for demonstration
-      final reviews = [
-        {
-          'id': '1',
-          'patientName': 'أحمد محمد',
-          'rating': 5.0,
-          'comment': 'طبيب ممتاز ومتعاون، شرح لي حالتي بالتفصيل وأعطاني العلاج المناسب.',
-          'date': DateTime.now().subtract(const Duration(days: 5)),
-        },
-        {
-          'id': '2',
-          'patientName': 'سارة علي',
-          'rating': 4.0,
-          'comment': 'دكتور جيد، لكن وقت الانتظار كان طويلاً.',
-          'date': DateTime.now().subtract(const Duration(days: 15)),
-        },
-        {
-          'id': '3',
-          'patientName': 'خالد عبدالله',
-          'rating': 5.0,
-          'comment': 'تجربة ممتازة، الدكتور متمكن ولديه خبرة كبيرة.',
-          'date': DateTime.now().subtract(const Duration(days: 30)),
-        },
-      ];
-      
-      // Calculate average rating
+
+      // جلب تقييمات الطبيب من قاعدة البيانات
+      final reviews = await _reviewService.getDoctorReviews(widget.doctorId);
+
+      // جلب أسماء المرضى
+      final patientNames = <String, String>{};
+      for (final review in reviews) {
+        try {
+          final patient =
+              await _authService.getUserProfileById(review.patientId);
+          if (patient != null) {
+            patientNames[review.patientId] = patient.fullName ?? patient.email;
+          }
+        } catch (e) {
+          developer.log('Error fetching patient name: $e');
+          patientNames[review.patientId] = 'مريض';
+        }
+      }
+
+      // حساب متوسط التقييم
       double totalRating = 0;
       for (final review in reviews) {
-        totalRating += review['rating'] as double;
+        totalRating += review.rating;
       }
-      final averageRating = reviews.isNotEmpty ? totalRating / reviews.length : 0.0;
+      final averageRating =
+          reviews.isNotEmpty ? totalRating / reviews.length : 0.0;
 
       setState(() {
         _doctor = doctor;
         _reviews = reviews;
+        _patientNames = patientNames;
         _averageRating = averageRating;
         _error = '';
         _isLoading = false;
       });
     } catch (e) {
+      developer.log('Error loading doctor details: $e');
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -88,17 +91,49 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
     }
   }
 
-  void _navigateToBookAppointment() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BookAppointmentScreen(
-          hospitalId: widget.hospitalId,
-          departmentId: '', // TODO: Get department ID
-          doctorId: widget.doctorId,
-        ),
-      ),
-    );
+  void _navigateToBookAppointment() async {
+    try {
+      // الحصول على معرف القسم من تفاصيل الطبيب
+      String departmentId = '';
+      if (_doctor != null && _doctor!.departmentId != null) {
+        departmentId = _doctor!.departmentId!;
+      } else {
+        // محاولة الحصول على معرف القسم من قاعدة البيانات
+        try {
+          final doctorDetails =
+              await _hospitalService.getDoctorDetails(widget.doctorId);
+          if (doctorDetails.departmentId != null) {
+            departmentId = doctorDetails.departmentId!;
+          }
+        } catch (e) {
+          developer.log('Error fetching doctor department: $e');
+        }
+      }
+
+      // استخدام AppNavigator للتنقل إلى شاشة حجز المواعيد
+      if (mounted) {
+        Navigator.pushNamed(
+          context,
+          '/book-appointment',
+          arguments: {
+            'hospitalId': widget.hospitalId,
+            'departmentId': departmentId,
+            'doctorId': widget.doctorId,
+          },
+        );
+      }
+    } catch (e) {
+      // عرض رسالة خطأ للمستخدم
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'حدث خطأ أثناء الانتقال إلى صفحة حجز الموعد: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -166,7 +201,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                                     : null,
                               ),
                               SizedBox(height: 16.h),
-                              
+
                               // اسم الطبيب
                               Text(
                                 _doctor!.nameArabic,
@@ -188,7 +223,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                                 ),
                               ],
                               SizedBox(height: 8.h),
-                              
+
                               // التخصص
                               Text(
                                 _doctor!.specializationArabic,
@@ -211,7 +246,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                                 ),
                               ],
                               SizedBox(height: 16.h),
-                              
+
                               // التقييم
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -246,7 +281,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                                 ],
                               ),
                               SizedBox(height: 16.h),
-                              
+
                               // المؤهلات
                               if (_doctor!.qualification != null) ...[
                                 Text(
@@ -264,7 +299,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                                 ),
                                 SizedBox(height: 16.h),
                               ],
-                              
+
                               // زر حجز موعد
                               SizedBox(
                                 width: double.infinity,
@@ -273,7 +308,8 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.primaryGreen,
                                     foregroundColor: Colors.white,
-                                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                                    padding:
+                                        EdgeInsets.symmetric(vertical: 12.h),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -292,17 +328,40 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                         ),
                       ),
                       SizedBox(height: 24.h),
-                      
+
                       // التقييمات
-                      Text(
-                        'التقييمات',
-                        style: TextStyle(
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'التقييمات',
+                            style: TextStyle(
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              AppNavigator.navigateToRateDoctor(
+                                context,
+                                doctorId: widget.doctorId,
+                                doctorName: _doctor?.nameArabic ?? 'الطبيب',
+                                hospitalName: 'المستشفى',
+                              );
+
+                              // إضافة مستمع للتنقل للتحقق من العودة من شاشة التقييم
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                // إعادة تحميل البيانات بعد العودة من شاشة التقييم
+                                _loadDoctorDetails();
+                              });
+                            },
+                            icon: const Icon(Icons.star, color: Colors.amber),
+                            label: const Text('إضافة تقييم'),
+                          ),
+                        ],
                       ),
                       SizedBox(height: 8.h),
-                      
+
                       _reviews.isEmpty
                           ? Center(
                               child: Padding(
@@ -331,7 +390,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
     );
   }
 
-  Widget _buildReviewCard(Map<String, dynamic> review) {
+  Widget _buildReviewCard(Review review) {
     return Card(
       margin: EdgeInsets.only(bottom: 12.h),
       elevation: 1,
@@ -347,7 +406,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  review['patientName'],
+                  _patientNames[review.patientId] ?? 'مريض',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.bold,
@@ -357,9 +416,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
                   children: [
                     ...List.generate(5, (index) {
                       return Icon(
-                        index < (review['rating'] as double).floor()
-                            ? Icons.star
-                            : Icons.star_border,
+                        index < review.rating ? Icons.star : Icons.star_border,
                         color: Colors.amber,
                         size: 16.w,
                       );
@@ -369,15 +426,16 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
               ],
             ),
             SizedBox(height: 8.h),
-            Text(
-              review['comment'],
-              style: TextStyle(fontSize: 14.sp),
-            ),
+            if (review.comment != null && review.comment!.isNotEmpty)
+              Text(
+                review.comment!,
+                style: TextStyle(fontSize: 14.sp),
+              ),
             SizedBox(height: 4.h),
             Align(
               alignment: Alignment.bottomLeft,
               child: Text(
-                _formatDate(review['date']),
+                _formatDate(review.createdAt),
                 style: TextStyle(
                   fontSize: 12.sp,
                   color: Colors.grey[600],
@@ -392,7 +450,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
 
   String _formatDate(DateTime date) {
     final difference = DateTime.now().difference(date);
-    
+
     if (difference.inDays == 0) {
       return 'اليوم';
     } else if (difference.inDays == 1) {

@@ -8,6 +8,7 @@ import 'core/config/environment_config.dart'
     show EnvironmentConfig, Environment;
 import 'core/theme/app_theme.dart';
 import 'core/navigation/app_router.dart';
+import 'core/utils/responsive_helper.dart';
 import 'features/hospitals/screens/home_screen.dart';
 
 void main() async {
@@ -70,30 +71,61 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ScreenUtilInit(
-      designSize: const Size(375, 812),
-      minTextAdapt: true,
-      splitScreenMode: true,
-      builder: (context, child) {
-        return MaterialApp(
-          title: 'منصة صحتي بلس',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [
-            Locale('ar', 'SA'),
-            Locale('en', 'US'),
-          ],
-          locale: const Locale('ar', 'SA'),
-          builder: EasyLoading.init(),
-          home: const HomeScreen(),
-          onGenerateRoute: AppRouter.generateRoute,
-        );
-      },
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      // تحديد حجم التصميم بناءً على عرض الشاشة
+      Size designSize;
+      if (constraints.maxWidth < 650) {
+        // الهاتف المحمول
+        designSize = const Size(375, 812);
+      } else if (constraints.maxWidth < 1100) {
+        // الجهاز اللوحي
+        designSize = const Size(768, 1024);
+      } else {
+        // سطح المكتب
+        designSize = const Size(1440, 900);
+      }
+
+      return ScreenUtilInit(
+        designSize: designSize,
+        minTextAdapt: true,
+        splitScreenMode: true,
+        builder: (context, child) {
+          return MaterialApp(
+            title: 'منصة صحتي بلس',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('ar', 'SA'),
+              Locale('en', 'US'),
+            ],
+            locale: const Locale('ar', 'SA'),
+            builder: (context, child) {
+              // تطبيق EasyLoading
+              child = EasyLoading.init()(context, child);
+
+              // تطبيق التوافق مع أحجام الشاشات المختلفة
+              return MediaQuery(
+                // تعديل حجم الخط بناءً على حجم الشاشة
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: MediaQuery.of(context).size.width < 650
+                      ? const TextScaler.linear(1.0)
+                      : MediaQuery.of(context).size.width < 1100
+                          ? const TextScaler.linear(1.1)
+                          : const TextScaler.linear(1.2),
+                ),
+                child: child,
+              );
+            },
+            home: const HomeScreen(),
+            onGenerateRoute: AppRouter.generateRoute,
+          );
+        },
+      );
+    });
   }
 }
